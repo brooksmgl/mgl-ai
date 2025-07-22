@@ -1,3 +1,5 @@
+let lastPromptWasImage = false;
+
 async function sendMessage() {
     const input = document.getElementById('user-input');
     const message = input.value.trim();
@@ -13,7 +15,11 @@ async function sendMessage() {
 
     try {
         let response;
-        if (message.toLowerCase().includes("generate an image") || message.toLowerCase().includes("create an image")) {
+        let isImageRequest = message.toLowerCase().includes("generate an image") ||
+                             message.toLowerCase().includes("create an image") ||
+                             lastPromptWasImage;
+
+        if (isImageRequest) {
             response = await fetch('/.netlify/functions/image', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -32,6 +38,7 @@ async function sendMessage() {
             image.style.maxWidth = '300px';
             image.className = 'message bot';
             messagesDiv.appendChild(image);
+            lastPromptWasImage = true;
         } else {
             response = await fetch('/.netlify/functions/chat', {
                 method: 'POST',
@@ -53,6 +60,7 @@ async function sendMessage() {
             botMsg.textContent = reply;
             botMsg.className = 'message bot';
             messagesDiv.appendChild(botMsg);
+            lastPromptWasImage = false;
         }
     } catch (err) {
         const errorMsg = document.createElement('div');
