@@ -101,8 +101,8 @@ exports.handler = async (event) => {
             };
         }
 
-        const imagePart = lastMsg.content.find(c => c.type === "image_file");
-        const textPart = lastMsg.content.find(c => c.type === "text");
+        const imagePart = lastMsg?.content?.find?.(c => c.type === "image_file");
+        const textPart = lastMsg?.content?.find?.(c => c.type === "text");
 
         return {
             statusCode: 200,
