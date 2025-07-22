@@ -12,27 +12,48 @@ async function sendMessage() {
     input.value = "";
 
     try {
-        const response = await fetch('/.netlify/functions/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                messages: [{ role: 'user', content: message }]
-            })
-        });
+        let response;
+        if (message.toLowerCase().includes("generate an image") || message.toLowerCase().includes("create an image")) {
+            response = await fetch('/.netlify/functions/image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: message })
+            });
 
-        const data = await response.json();
+            const data = await response.json();
 
-        if (!response.ok || data.error) {
-            throw new Error(data.error || `HTTP ${response.status}`);
+            if (!response.ok || data.error) {
+                throw new Error(data.error || `HTTP ${response.status}`);
+            }
+
+            const image = document.createElement('img');
+            image.src = data.imageUrl;
+            image.alt = message;
+            image.style.maxWidth = '300px';
+            image.className = 'message bot';
+            messagesDiv.appendChild(image);
+        } else {
+            response = await fetch('/.netlify/functions/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: [{ role: 'user', content: message }]
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || data.error) {
+                throw new Error(data.error || `HTTP ${response.status}`);
+            }
+
+            const reply = data.choices?.[0]?.message?.content || "No response";
+
+            const botMsg = document.createElement('div');
+            botMsg.textContent = reply;
+            botMsg.className = 'message bot';
+            messagesDiv.appendChild(botMsg);
         }
-
-        const reply = data.choices?.[0]?.message?.content || "No response";
-
-        const botMsg = document.createElement('div');
-        botMsg.textContent = reply;
-        botMsg.className = 'message bot';
-        messagesDiv.appendChild(botMsg);
-
     } catch (err) {
         const errorMsg = document.createElement('div');
         errorMsg.textContent = `Error: ${err.message}`;
