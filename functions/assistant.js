@@ -92,7 +92,7 @@ exports.handler = async (event) => {
         const sortedMessages = Array.isArray(messagesRes.data)
             ? messagesRes.data
                 .filter(msg => msg.role === "assistant" && Array.isArray(msg.content) && msg.content.length > 0)
-                .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+                .sort((a, b) => b.created_at - a.created_at)
             : [];
 
         const lastMsg = sortedMessages.length > 0 ? sortedMessages[0] : null;
@@ -105,13 +105,10 @@ exports.handler = async (event) => {
             };
         }
 
-        const imagePart = Array.isArray(lastMsg?.content)
-            ? lastMsg.content.find(c => c.type === "image_file")
-            : null;
+        const contentArray = Array.isArray(lastMsg?.content) ? lastMsg.content : [];
 
-        const textPart = Array.isArray(lastMsg?.content)
-            ? lastMsg.content.find(c => c.type === "text")
-            : null;
+        const imagePart = contentArray.find(c => c.type === "image_file") || null;
+        const textPart = contentArray.find(c => c.type === "text") || null;
 
         return {
             statusCode: 200,
