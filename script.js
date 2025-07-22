@@ -1,11 +1,12 @@
 let lastPromptWasImage = false;
+let lastImagePrompt = "";
+let lastThreadId = null;
 
 async function sendMessage() {
     const input = document.getElementById('user-input');
     const message = input.value.trim();
     if (!message) return;
 
-    // Render user's message
     const messagesDiv = document.getElementById('messages');
     const userMsg = document.createElement('div');
     userMsg.textContent = message;
@@ -19,19 +20,23 @@ async function sendMessage() {
                              message.toLowerCase().includes("create an image") ||
                              lastPromptWasImage;
 
+        const endpoint = isImageRequest ? '/.netlify/functions/image-assistant' : '/.netlify/functions/chat-assistant';
+
+        response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message, threadId: lastThreadId })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || data.error) {
+            throw new Error(data.error || `HTTP ${response.status}`);
+        }
+
+        lastThreadId = data.threadId;
+
         if (isImageRequest) {
-            response = await fetch('/.netlify/functions/image', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: message })
-            });
-
-            const data = await response.json();
-
-            if (!response.ok || data.error) {
-                throw new Error(data.error || `HTTP ${response.status}`);
-            }
-
             const image = document.createElement('img');
             image.src = data.imageUrl;
             image.alt = message;
@@ -39,23 +44,9 @@ async function sendMessage() {
             image.className = 'message bot';
             messagesDiv.appendChild(image);
             lastPromptWasImage = true;
+            lastImagePrompt = lastPromptWasImage ? `${lastImagePrompt} ${message}` : message;
         } else {
-            response = await fetch('/.netlify/functions/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    messages: [{ role: 'user', content: message }]
-                })
-            });
-
-            const data = await response.json();
-
-            if (!response.ok || data.error) {
-                throw new Error(data.error || `HTTP ${response.status}`);
-            }
-
-            const reply = data.choices?.[0]?.message?.content || "No response";
-
+            const reply = data.reply || "No response";
             const botMsg = document.createElement('div');
             botMsg.textContent = reply;
             botMsg.className = 'message bot';
