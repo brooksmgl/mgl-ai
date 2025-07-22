@@ -7,7 +7,7 @@ async function sendMessage() {
     const messagesDiv = document.getElementById('messages');
     const userMsg = document.createElement('div');
     userMsg.textContent = message;
-    userMsg.className = 'user-message';
+    userMsg.className = 'message user';
     messagesDiv.appendChild(userMsg);
     input.value = "";
 
@@ -30,13 +30,13 @@ async function sendMessage() {
 
         const botMsg = document.createElement('div');
         botMsg.textContent = reply;
-        botMsg.className = 'bot-message';
+        botMsg.className = 'message bot';
         messagesDiv.appendChild(botMsg);
 
     } catch (err) {
         const errorMsg = document.createElement('div');
         errorMsg.textContent = `Error: ${err.message}`;
-        errorMsg.className = 'bot-message error';
+        errorMsg.className = 'message bot';
         messagesDiv.appendChild(errorMsg);
         console.error(err);
     }

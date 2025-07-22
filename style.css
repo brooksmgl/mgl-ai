@@ -73,12 +73,13 @@ input[type="text"] {
 }
 
 .message {
-  max-width: 75%;
+  max-width: 90%;
   padding: 12px 16px;
   border-radius: 16px;
   font-size: 16px;
   line-height: 1.4;
   word-wrap: break-word;
+  margin: 4px 0;
 }
 
 .message.user {
