@@ -89,13 +89,13 @@ exports.handler = async (event) => {
             headers: { "Authorization": `Bearer ${OPENAI_KEY}` }
         }).then(res => res.json());
 
-        const lastMsg = Array.isArray(messagesRes.data)
-            ? messagesRes.data.find(msg =>
-                msg.role === "assistant" &&
-                Array.isArray(msg.content) &&
-                msg.content.length > 0
-              )
-            : null;
+        const sortedMessages = Array.isArray(messagesRes.data)
+            ? messagesRes.data
+                .filter(msg => msg.role === "assistant" && Array.isArray(msg.content) && msg.content.length > 0)
+                .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+            : [];
+
+        const lastMsg = sortedMessages.length > 0 ? sortedMessages[0] : null;
 
         if (!lastMsg) {
             return {
