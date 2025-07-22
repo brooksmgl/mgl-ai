@@ -89,9 +89,13 @@ exports.handler = async (event) => {
             headers: { "Authorization": `Bearer ${OPENAI_KEY}` }
         }).then(res => res.json());
 
-        const lastMsg = messagesRes.data.find(msg =>
-            msg.role === "assistant" && msg.content?.length > 0
-        );
+        const lastMsg = Array.isArray(messagesRes.data)
+            ? messagesRes.data.find(msg =>
+                msg.role === "assistant" &&
+                Array.isArray(msg.content) &&
+                msg.content.length > 0
+              )
+            : null;
 
         if (!lastMsg) {
             return {
@@ -101,8 +105,13 @@ exports.handler = async (event) => {
             };
         }
 
-        const imagePart = lastMsg?.content?.find?.(c => c.type === "image_file");
-        const textPart = lastMsg?.content?.find?.(c => c.type === "text");
+        const imagePart = Array.isArray(lastMsg?.content)
+            ? lastMsg.content.find(c => c.type === "image_file")
+            : null;
+
+        const textPart = Array.isArray(lastMsg?.content)
+            ? lastMsg.content.find(c => c.type === "text")
+            : null;
 
         return {
             statusCode: 200,
