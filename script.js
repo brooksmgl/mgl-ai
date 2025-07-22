@@ -15,14 +15,7 @@ async function sendMessage() {
     input.value = "";
 
     try {
-        let response;
-        let isImageRequest = message.toLowerCase().includes("generate an image") ||
-                             message.toLowerCase().includes("create an image") ||
-                             lastPromptWasImage;
-
-        const endpoint = isImageRequest ? '/.netlify/functions/image-assistant' : '/.netlify/functions/chat-assistant';
-
-        response = await fetch(endpoint, {
+        const response = await fetch('/.netlify/functions/assistant', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ message, threadId: lastThreadId })
@@ -36,22 +29,20 @@ async function sendMessage() {
 
         lastThreadId = data.threadId;
 
-        if (isImageRequest) {
+        if (data.text) {
+            const botMsg = document.createElement('div');
+            botMsg.textContent = data.text;
+            botMsg.className = 'message bot';
+            messagesDiv.appendChild(botMsg);
+        }
+
+        if (data.imageUrl) {
             const image = document.createElement('img');
             image.src = data.imageUrl;
             image.alt = message;
             image.style.maxWidth = '300px';
             image.className = 'message bot';
             messagesDiv.appendChild(image);
-            lastPromptWasImage = true;
-            lastImagePrompt = lastPromptWasImage ? `${lastImagePrompt} ${message}` : message;
-        } else {
-            const reply = data.reply || "No response";
-            const botMsg = document.createElement('div');
-            botMsg.textContent = reply;
-            botMsg.className = 'message bot';
-            messagesDiv.appendChild(botMsg);
-            lastPromptWasImage = false;
         }
     } catch (err) {
         const errorMsg = document.createElement('div');

@@ -41,7 +41,6 @@ exports.handler = async (event) => {
             };
         }
 
-        // Create or reuse thread
         const threadRes = threadId
             ? { id: threadId }
             : await fetch("https://api.openai.com/v1/threads", {
@@ -54,7 +53,6 @@ exports.handler = async (event) => {
 
         const thread_id = threadRes.id;
 
-        // Add message to thread
         await fetch(`https://api.openai.com/v1/threads/${thread_id}/messages`, {
             method: "POST",
             headers: {
@@ -67,7 +65,6 @@ exports.handler = async (event) => {
             })
         });
 
-        // Run the assistant
         const runRes = await fetch(`https://api.openai.com/v1/threads/${thread_id}/runs`, {
             method: "POST",
             headers: {
@@ -79,7 +76,6 @@ exports.handler = async (event) => {
 
         const run_id = runRes.id;
 
-        // Wait for completion
         let status = "in_progress";
         while (status === "in_progress" || status === "queued") {
             await new Promise(resolve => setTimeout(resolve, 1000));
@@ -89,23 +85,36 @@ exports.handler = async (event) => {
             status = check.status;
         }
 
-        // Fetch response messages
         const messagesRes = await fetch(`https://api.openai.com/v1/threads/${thread_id}/messages`, {
             headers: { "Authorization": `Bearer ${OPENAI_KEY}` }
         }).then(res => res.json());
 
-        const lastMsg = messagesRes.data.find(msg => msg.role === "assistant");
+        const lastMsg = messagesRes.data.find(msg =>
+            msg.role === "assistant" && msg.content?.length > 0
+        );
+
+        if (!lastMsg) {
+            return {
+                statusCode: 400,
+                headers,
+                body: JSON.stringify({ error: "No assistant response found" })
+            };
+        }
+
+        const imagePart = lastMsg.content.find(c => c.type === "image_file");
+        const textPart = lastMsg.content.find(c => c.type === "text");
 
         return {
             statusCode: 200,
             headers,
             body: JSON.stringify({
-                reply: lastMsg?.content?.[0]?.text?.value || "No reply",
+                imageUrl: imagePart?.image_file?.url || null,
+                text: textPart?.text?.value || null,
                 threadId: thread_id
             })
         };
     } catch (error) {
-        console.error("Error in chat-assistant function:", error);
+        console.error("Error in assistant function:", error);
         return {
             statusCode: 500,
             headers,
