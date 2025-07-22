@@ -93,7 +93,7 @@ exports.handler = async (event) => {
             headers: { "Authorization": `Bearer ${OPENAI_KEY}` }
         }).then(res => res.json());
 
-        console.log("MESSAGES RESPONSE:", messagesRes);
+        console.log("MESSAGES RESPONSE:", JSON.stringify(messagesRes, null, 2));
 
         const sortedMessages = Array.isArray(messagesRes.data)
             ? messagesRes.data
