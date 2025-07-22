@@ -51,6 +51,8 @@ exports.handler = async (event) => {
                 }
             }).then(res => res.json());
 
+        console.log("THREAD RESPONSE:", threadRes);
+
         const thread_id = threadRes.id;
 
         await fetch(`https://api.openai.com/v1/threads/${thread_id}/messages`, {
@@ -74,6 +76,8 @@ exports.handler = async (event) => {
             body: JSON.stringify({ assistant_id: ASSISTANT_ID })
         }).then(res => res.json());
 
+        console.log("RUN RESPONSE:", runRes);
+
         const run_id = runRes.id;
 
         let status = "in_progress";
@@ -88,6 +92,8 @@ exports.handler = async (event) => {
         const messagesRes = await fetch(`https://api.openai.com/v1/threads/${thread_id}/messages`, {
             headers: { "Authorization": `Bearer ${OPENAI_KEY}` }
         }).then(res => res.json());
+
+        console.log("MESSAGES RESPONSE:", messagesRes);
 
         const sortedMessages = Array.isArray(messagesRes.data)
             ? messagesRes.data
