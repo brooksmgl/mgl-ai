@@ -14,6 +14,12 @@ async function sendMessage() {
     messagesDiv.appendChild(userMsg);
     input.value = "";
 
+    // Show loading animation
+    const loadingMsg = document.createElement('div');
+    loadingMsg.className = 'message bot loading';
+    loadingMsg.textContent = '...'; // or use animation via CSS
+    messagesDiv.appendChild(loadingMsg);
+
     try {
         const response = await fetch('/.netlify/functions/assistant', {
             method: 'POST',
@@ -36,15 +42,18 @@ async function sendMessage() {
             messagesDiv.appendChild(botMsg);
         }
 
-        if (data.imageUrl) {
+        if (data.imageFileId) {
             const image = document.createElement('img');
-            image.src = data.imageUrl;
+            image.src = `https://api.openai.com/v1/files/${data.imageFileId}/content`;
             image.alt = message;
             image.style.maxWidth = '300px';
             image.className = 'message bot';
             messagesDiv.appendChild(image);
         }
+
+        loadingMsg.remove();
     } catch (err) {
+        loadingMsg.remove();
         const errorMsg = document.createElement('div');
         errorMsg.textContent = `Error: ${err.message}`;
         errorMsg.className = 'message bot';
