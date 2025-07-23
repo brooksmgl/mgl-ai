@@ -138,11 +138,23 @@ exports.handler = async (event) => {
         const imagePart = contentArray.find(c => c.type === "image_file") || null;
         const textPart = contentArray.find(c => c.type === "text") || null;
 
+        let imageUrl = null;
+        if (imagePart?.image_file?.file_id) {
+            const imageRes = await fetch(`https://api.openai.com/v1/files/${imagePart.image_file.file_id}/content`, {
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${OPENAI_KEY}`,
+                    "OpenAI-Beta": "assistants=v2"
+                }
+            });
+            imageUrl = imageRes.url || null;
+        }
+
         return {
             statusCode: 200,
             headers,
             body: JSON.stringify({
-                imageUrl: imagePart?.image_file?.url || null,
+                imageUrl,
                 text: textPart?.text?.value || null,
                 threadId: thread_id
             })
