@@ -17,7 +17,7 @@ async function sendMessage() {
     // Show loading animation
     const loadingMsg = document.createElement('div');
     loadingMsg.className = 'message bot loading';
-    loadingMsg.textContent = '...'; // or use animation via CSS
+    loadingMsg.innerHTML = '<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span>';
     messagesDiv.appendChild(loadingMsg);
 
     try {
@@ -44,7 +44,7 @@ async function sendMessage() {
 
         if (data.imageFileId) {
             const image = document.createElement('img');
-            image.src = `https://api.openai.com/v1/files/${data.imageFileId}/content`;
+            image.src = `/.netlify/functions/image?fileId=${data.imageFileId}`;
             image.alt = message;
             image.style.maxWidth = '300px';
             image.className = 'message bot';
