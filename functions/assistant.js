@@ -147,7 +147,7 @@ exports.handler = async (event) => {
                     "OpenAI-Beta": "assistants=v2"
                 }
             });
-            imageUrl = imageRes.url || null;
+            imageUrl = imageRes.headers.get("location") || null;
         }
 
         return {
