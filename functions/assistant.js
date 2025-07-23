@@ -139,7 +139,7 @@ exports.handler = async (event) => {
             })
         };
     } catch (error) {
-        console.error("Error in assistant function:", error);
+        console.error("Error in assistant function:", error.stack || error);
         return {
             statusCode: 500,
             headers,
