@@ -81,12 +81,25 @@ exports.handler = async (event) => {
         const run_id = runRes.id;
 
         let status = "in_progress";
-        while (status === "in_progress" || status === "queued") {
+        let attempts = 0;
+        const maxAttempts = 30;
+
+        while ((status === "in_progress" || status === "queued") && attempts < maxAttempts) {
             await new Promise(resolve => setTimeout(resolve, 1000));
-            const check = await fetch(`https://api.openai.com/v1/threads/${thread_id}/runs/${run_id}`, {
+            const checkRes = await fetch(`https://api.openai.com/v1/threads/${thread_id}/runs/${run_id}`, {
                 headers: { "Authorization": `Bearer ${OPENAI_KEY}` }
-            }).then(res => res.json());
+            });
+            const check = await checkRes.json();
             status = check.status;
+            attempts++;
+        }
+
+        if (status !== "completed") {
+            return {
+                statusCode: 500,
+                headers,
+                body: JSON.stringify({ error: "Assistant run did not complete in time." })
+            };
         }
 
         const messagesRes = await fetch(`https://api.openai.com/v1/threads/${thread_id}/messages`, {
