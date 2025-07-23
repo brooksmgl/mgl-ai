@@ -47,7 +47,8 @@ exports.handler = async (event) => {
                 method: "POST",
                 headers: {
                     "Authorization": `Bearer ${OPENAI_KEY}`,
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    "OpenAI-Beta": "assistants=v2"
                 }
             }).then(res => res.json());
 
@@ -59,7 +60,8 @@ exports.handler = async (event) => {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${OPENAI_KEY}`,
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "OpenAI-Beta": "assistants=v2"
             },
             body: JSON.stringify({
                 role: "user",
@@ -71,7 +73,8 @@ exports.handler = async (event) => {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${OPENAI_KEY}`,
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "OpenAI-Beta": "assistants=v2"
             },
             body: JSON.stringify({ assistant_id: ASSISTANT_ID })
         }).then(res => res.json());
@@ -87,7 +90,10 @@ exports.handler = async (event) => {
         while ((status === "in_progress" || status === "queued") && attempts < maxAttempts) {
             await new Promise(resolve => setTimeout(resolve, 1000));
             const checkRes = await fetch(`https://api.openai.com/v1/threads/${thread_id}/runs/${run_id}`, {
-                headers: { "Authorization": `Bearer ${OPENAI_KEY}` }
+                headers: {
+                    "Authorization": `Bearer ${OPENAI_KEY}`,
+                    "OpenAI-Beta": "assistants=v2"
+                }
             });
             const check = await checkRes.json();
             status = check.status;
@@ -103,7 +109,10 @@ exports.handler = async (event) => {
         }
 
         const messagesRes = await fetch(`https://api.openai.com/v1/threads/${thread_id}/messages`, {
-            headers: { "Authorization": `Bearer ${OPENAI_KEY}` }
+            headers: {
+                "Authorization": `Bearer ${OPENAI_KEY}`,
+                "OpenAI-Beta": "assistants=v2"
+            }
         }).then(res => res.json());
 
         console.log("MESSAGES RESPONSE:", JSON.stringify(messagesRes, null, 2));
