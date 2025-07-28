@@ -147,7 +147,9 @@ exports.handler = async (event) => {
                     "OpenAI-Beta": "assistants=v2"
                 }
             });
-            imageUrl = imageRes.headers.get("location") || null;
+            const buffer = await imageRes.arrayBuffer();
+            const base64Image = Buffer.from(buffer).toString('base64');
+            imageUrl = `data:image/png;base64,${base64Image}`;
         }
 
         return {

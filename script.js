@@ -17,7 +17,7 @@ async function sendMessage() {
     // Show loading animation
     const loadingMsg = document.createElement('div');
     loadingMsg.className = 'message bot loading';
-    loadingMsg.innerHTML = '<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span>';
+    loadingMsg.innerHTML = '<div class="spinner"></div>';
     messagesDiv.appendChild(loadingMsg);
 
     try {
@@ -42,9 +42,9 @@ async function sendMessage() {
             messagesDiv.appendChild(botMsg);
         }
 
-        if (data.imageFileId) {
+        if (data.imageUrl) {
             const image = document.createElement('img');
-            image.src = `/.netlify/functions/image?fileId=${data.imageFileId}`;
+            image.src = data.imageUrl;
             image.alt = message;
             image.style.maxWidth = '300px';
             image.className = 'message bot';
