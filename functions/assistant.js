@@ -2,7 +2,7 @@ const fetch = require('node-fetch');
 
 function isImageRequest(prompt, previousPrompt) {
     const directImagePrompt = /draw|illustrate|image|picture|generate.*image|create.*image/i.test(prompt);
-    const editRequest = /make.*|change.*|update.*/i.test(prompt);
+    const editRequest = /(make|change|remove|replace|update|edit).*image/i.test(prompt);
     return directImagePrompt || (previousPrompt && editRequest);
 }
 
@@ -67,16 +67,14 @@ exports.handler = async (event) => {
             };
         }
 
-        const threadRes = threadId
-            ? { id: threadId }
-            : await fetch("https://api.openai.com/v1/threads", {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${OPENAI_KEY}`,
-                    "Content-Type": "application/json",
-                    "OpenAI-Beta": "assistants=v2"
-                }
-            }).then(res => res.json());
+        const threadRes = await fetch("https://api.openai.com/v1/threads", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${OPENAI_KEY}`,
+                "Content-Type": "application/json",
+                "OpenAI-Beta": "assistants=v2"
+            }
+        }).then(res => res.json());
 
         console.log("THREAD RESPONSE:", threadRes);
 
@@ -198,6 +196,9 @@ exports.handler = async (event) => {
         // Fallback: if no image from assistant and user message indicates image request, generate image via DALL·E 3
         if (!imageUrl && isImageRequest(userMessage, previousPrompt)) {
             try {
+                const editing = previousPrompt && /(make|change|remove|replace|update|edit)/i.test(userMessage);
+                const dallePrompt = editing ? enhancePrompt(`${previousPrompt}, ${userMessage}`) : enhancePrompt(userMessage);
+
                 const imageRes = await fetch("https://api.openai.com/v1/images/generations", {
                     method: "POST",
                     headers: {
@@ -206,7 +207,7 @@ exports.handler = async (event) => {
                     },
                     body: JSON.stringify({
                         model: "dall-e-3",
-                        prompt: enhancePrompt(previousPrompt ? `${previousPrompt}, but ${userMessage}` : userMessage),
+                        prompt: dallePrompt,
                         n: 1,
                         size: "1024x1024",
                     }),

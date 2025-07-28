@@ -102,19 +102,3 @@ document.addEventListener("DOMContentLoaded", () => {
 
     sendBtn.addEventListener("click", sendMessage);
 });
-
-const resetBtn = document.getElementById("reset-btn");
-if (resetBtn) {
-    resetBtn.addEventListener("click", () => {
-        localStorage.removeItem("mgl_thread_id");
-        lastThreadId = null;
-
-        const messagesDiv = document.getElementById("messages");
-        messagesDiv.innerHTML = "";
-
-        const resetMsg = document.createElement("div");
-        resetMsg.textContent = "Thread reset.";
-        resetMsg.className = "message bot";
-        messagesDiv.appendChild(resetMsg);
-    });
-}
