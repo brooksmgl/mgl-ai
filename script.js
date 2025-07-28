@@ -43,11 +43,15 @@ async function sendMessage() {
         }
 
         if (data.imageUrl) {
+            console.log("🔍 imageUrl received:", data.imageUrl);
             const image = document.createElement('img');
             image.src = data.imageUrl;
             image.alt = message;
             image.style.maxWidth = '300px';
             image.className = 'message bot';
+            image.onerror = () => {
+                console.error("🚨 Image failed to load:", data.imageUrl);
+            };
             messagesDiv.appendChild(image);
         }
 
