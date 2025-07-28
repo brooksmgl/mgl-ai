@@ -1,6 +1,7 @@
 let lastPromptWasImage = false;
 let lastImagePrompt = "";
 let lastThreadId = null;
+let lastImageUrl = "";
 
 function getOrCreateThreadId() {
     let threadId = sessionStorage.getItem('mgl_thread_id');
@@ -42,7 +43,7 @@ async function sendMessage() {
         const response = await fetch('/.netlify/functions/assistant', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message, threadId: getOrCreateThreadId(), lastImagePrompt })
+            body: JSON.stringify({ message, threadId: getOrCreateThreadId(), lastImagePrompt, lastImageUrl })
         });
 
         const data = await response.json();
@@ -72,6 +73,7 @@ async function sendMessage() {
                 console.error("🚨 Image failed to load:", data.imageUrl);
             };
             messagesDiv.appendChild(image);
+            lastImageUrl = data.imageUrl;
         }
 
         if (data.imageUrl && isImagePrompt(message)) {

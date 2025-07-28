@@ -32,7 +32,7 @@ exports.handler = async (event) => {
     try {
         const OPENAI_KEY = process.env.OPENAI_API_KEY;
         const ASSISTANT_ID = process.env.OPENAI_ASSISTANT_ID;
-        const { message: userMessage, threadId, lastImagePrompt } = JSON.parse(event.body || '{}');
+        const { message: userMessage, threadId, lastImagePrompt, lastImageUrl } = JSON.parse(event.body || '{}');
 
         let previousPrompt = lastImagePrompt || null;
         if (threadId) {
@@ -210,6 +210,7 @@ exports.handler = async (event) => {
                         prompt: dallePrompt,
                         n: 1,
                         size: "1024x1024",
+                        ...(editing && lastImageUrl ? { image_url: lastImageUrl } : {})
                     }),
                 });
 
