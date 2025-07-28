@@ -28,6 +28,8 @@ exports.handler = async (event) => {
     }
 
     try {
+        const OPENAI_KEY = process.env.OPENAI_API_KEY;
+        const ASSISTANT_ID = process.env.OPENAI_ASSISTANT_ID;
         const { message: userMessage, threadId } = JSON.parse(event.body || '{}');
 
         let previousPrompt = null;
@@ -54,8 +56,6 @@ exports.handler = async (event) => {
             };
         }
 
-        const OPENAI_KEY = process.env.OPENAI_API_KEY;
-        const ASSISTANT_ID = process.env.OPENAI_ASSISTANT_ID;
 
         if (!OPENAI_KEY || !ASSISTANT_ID) {
             return {
