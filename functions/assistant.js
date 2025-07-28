@@ -215,7 +215,20 @@ exports.handler = async (event) => {
                     }),
                 });
 
-                const imageData = await imageRes.json();
+                if (!imageRes.ok) {
+                    const errText = await imageRes.text();
+                    console.error("Image API error response:", errText);
+                    throw new Error("DALL·E image generation failed.");
+                }
+
+                let imageData;
+                try {
+                    imageData = await imageRes.json();
+                } catch (jsonErr) {
+                    console.error("Failed to parse image JSON:", jsonErr);
+                    throw new Error("Invalid image response from OpenAI.");
+                }
+
                 if (imageData?.data?.[0]?.url) {
                     imageUrl = imageData.data[0].url;
                     assistantResponse.image = imageUrl;
