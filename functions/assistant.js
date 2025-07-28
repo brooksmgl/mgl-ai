@@ -159,12 +159,16 @@ exports.handler = async (event) => {
             imageUrl = `data:image/png;base64,${base64Image}`;
         }
 
+        let cleanedText = textPart?.text?.value || null;
+        if (!imageUrl && cleanedText) {
+            cleanedText = cleanedText.replace(/!\[.*?\]\(sandbox:.*?\)/g, '').trim();
+        }
         return {
             statusCode: 200,
             headers,
             body: JSON.stringify({
                 imageUrl,
-                text: textPart?.text?.value || null,
+                text: cleanedText,
                 threadId: thread_id
             })
         };
