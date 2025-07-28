@@ -185,7 +185,7 @@ exports.handler = async (event) => {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    prompt: message,
+                    prompt: enhancePrompt(message),
                     model: "dall-e-3",
                     n: 1,
                     size: "1024x1024"
