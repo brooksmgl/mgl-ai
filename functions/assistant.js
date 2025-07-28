@@ -205,13 +205,22 @@ exports.handler = async (event) => {
                         "Content-Type": "application/json",
                         Authorization: `Bearer ${OPENAI_KEY}`,
                     },
-                    body: JSON.stringify({
-                        model: "dall-e-3",
-                        prompt: dallePrompt,
-                        n: 1,
-                        size: "1024x1024",
-                        ...(editing && lastImageUrl ? { image_url: lastImageUrl } : {})
-                    }),
+                    body: JSON.stringify(
+                        editing && lastImageUrl
+                            ? {
+                                  model: "dall-e-3",
+                                  prompt: dallePrompt,
+                                  n: 1,
+                                  size: "1024x1024",
+                                  image_url: lastImageUrl
+                              }
+                            : {
+                                  model: "dall-e-3",
+                                  prompt: dallePrompt,
+                                  n: 1,
+                                  size: "1024x1024"
+                              }
+                    ),
                 });
 
                 const imageData = await imageRes.json();
