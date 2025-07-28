@@ -42,7 +42,7 @@ async function sendMessage() {
         const response = await fetch('/.netlify/functions/assistant', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message, threadId: getOrCreateThreadId(), lastImagePrompt: localStorage.getItem('lastImagePrompt') })
+            body: JSON.stringify({ message, threadId: getOrCreateThreadId(), lastImagePrompt })
         });
 
         const data = await response.json();
@@ -75,7 +75,7 @@ async function sendMessage() {
         }
 
         if (data.imageUrl && isImagePrompt(message)) {
-            localStorage.setItem('lastImagePrompt', message);
+            lastImagePrompt = message;
         }
 
         loadingMsg.remove();

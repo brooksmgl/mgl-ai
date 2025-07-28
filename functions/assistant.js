@@ -34,7 +34,7 @@ exports.handler = async (event) => {
         const ASSISTANT_ID = process.env.OPENAI_ASSISTANT_ID;
         const { message: userMessage, threadId, lastImagePrompt } = JSON.parse(event.body || '{}');
 
-        let previousPrompt = null;
+        let previousPrompt = lastImagePrompt || null;
         if (threadId) {
             const previousMessages = await fetch(`https://api.openai.com/v1/threads/${threadId}/messages`, {
                 headers: {
