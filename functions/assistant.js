@@ -1,12 +1,12 @@
 const fetch = require('node-fetch');
 
-const enhancePrompt = (raw) => {
-    const lower = raw.toLowerCase();
-    const isRealistic = /(photo|photorealistic|realistic|lifelike)/.test(lower);
-    return isRealistic
-        ? `A high-resolution, photorealistic image of: ${raw.trim()}. Studio lighting, natural texture, sharp detail.`
-        : `A simple, clean, high-quality illustration of: ${raw.trim()}. Cartoon style, bold lines, pastel or primary colors, clear shape definition.`;
-};
+function isImageRequest(prompt) {
+    return /draw|illustrate|image|picture|generate.*image|create.*image/i.test(prompt);
+}
+
+function enhancePrompt(prompt) {
+    return `In a cute, cartoon, craft-friendly style: ${prompt}`;
+}
 
 exports.handler = async (event) => {
     const headers = {
@@ -28,9 +28,9 @@ exports.handler = async (event) => {
     }
 
     try {
-        const { message, threadId } = JSON.parse(event.body || '{}');
+        const { message: userMessage, threadId } = JSON.parse(event.body || '{}');
 
-        if (!message) {
+        if (!userMessage) {
             return {
                 statusCode: 400,
                 headers,
@@ -73,7 +73,7 @@ exports.handler = async (event) => {
             },
             body: JSON.stringify({
                 role: "user",
-                content: message
+                content: userMessage
             })
         });
 
@@ -143,6 +143,16 @@ exports.handler = async (event) => {
 
         const contentArray = Array.isArray(lastMsg?.content) ? lastMsg.content : [];
 
+        const textPart = contentArray.find(c => c.type === "text") || null;
+        const cleanedText = textPart?.text?.value || null;
+
+        // Determine if assistant response includes image info
+        const assistantResponse = {
+            text: cleanedText,
+            image: null
+        };
+
+        // Attempt to find image file in content or files
         let imagePart = contentArray.find(c => c.type === "image_file") || null;
         if (!imagePart && Array.isArray(lastMsg.files) && lastMsg.files.length > 0) {
             imagePart = {
@@ -151,9 +161,7 @@ exports.handler = async (event) => {
                 }
             };
         }
-        const textPart = contentArray.find(c => c.type === "text") || null;
 
-        let imageUrl = null;
         if (imagePart?.image_file?.file_id) {
             const imageRes = await fetch(`https://api.openai.com/v1/files/${imagePart.image_file.file_id}/content`, {
                 method: "GET",
@@ -164,49 +172,43 @@ exports.handler = async (event) => {
             });
             const buffer = await imageRes.buffer();
             const base64Image = Buffer.from(buffer).toString('base64');
-            imageUrl = `data:image/png;base64,${base64Image}`;
+            assistantResponse.image = `data:image/png;base64,${base64Image}`;
         }
 
-        let cleanedText = textPart?.text?.value || null;
-        if (!imageUrl && cleanedText) {
-            cleanedText = cleanedText.replace(/!\[.*?\]\(sandbox:.*?\)/g, '').trim();
-        }
+        let imageUrl = assistantResponse.image;
 
-        // If no imageUrl and cleanedText mentions a sandbox image, try direct image generation
-        if (
-            !imageUrl &&
-            cleanedText &&
-            /sandbox:.*?\.(png|jpg|jpeg)/i.test(cleanedText)
-        ) {
-            const imageGenRes = await fetch("https://api.openai.com/v1/images/generations", {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${OPENAI_KEY}`,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    prompt: enhancePrompt(message),
-                    model: "dall-e-3",
-                    n: 1,
-                    size: "1024x1024"
-                })
-            }).then(res => res.json());
+        // Fallback: if no image from assistant and user message indicates image request, generate image via DALL·E 3
+        if (!imageUrl && isImageRequest(userMessage)) {
+            try {
+                const imageRes = await fetch("https://api.openai.com/v1/images/generations", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${OPENAI_KEY}`,
+                    },
+                    body: JSON.stringify({
+                        model: "dall-e-3",
+                        prompt: enhancePrompt(userMessage),
+                        n: 1,
+                        size: "1024x1024",
+                    }),
+                });
 
-            const imageGenUrl = imageGenRes?.data?.[0]?.url || null;
-
-            if (imageGenUrl) {
-                const imgRes = await fetch(imageGenUrl);
-                const imgBuffer = await imgRes.buffer();
-                const imgBase64 = Buffer.from(imgBuffer).toString('base64');
-                imageUrl = `data:image/png;base64,${imgBase64}`;
+                const imageData = await imageRes.json();
+                if (imageData?.data?.[0]?.url) {
+                    imageUrl = imageData.data[0].url;
+                }
+            } catch (error) {
+                console.error("Image generation failed:", error);
             }
         }
+
         return {
             statusCode: 200,
             headers,
             body: JSON.stringify({
+                text: assistantResponse.text || "Here's your image!",
                 imageUrl,
-                text: cleanedText,
                 threadId: thread_id
             })
         };
