@@ -163,6 +163,36 @@ exports.handler = async (event) => {
         if (!imageUrl && cleanedText) {
             cleanedText = cleanedText.replace(/!\[.*?\]\(sandbox:.*?\)/g, '').trim();
         }
+
+        // If no imageUrl and cleanedText mentions a sandbox image, try direct image generation
+        if (
+            !imageUrl &&
+            cleanedText &&
+            /sandbox:.*?\.(png|jpg|jpeg)/i.test(cleanedText)
+        ) {
+            const imageGenRes = await fetch("https://api.openai.com/v1/images/generations", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${OPENAI_KEY}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    prompt: message,
+                    model: "dall-e-3",
+                    n: 1,
+                    size: "1024x1024"
+                })
+            }).then(res => res.json());
+
+            const imageGenUrl = imageGenRes?.data?.[0]?.url || null;
+
+            if (imageGenUrl) {
+                const imgRes = await fetch(imageGenUrl);
+                const imgBuffer = await imgRes.buffer();
+                const imgBase64 = Buffer.from(imgBuffer).toString('base64');
+                imageUrl = `data:image/png;base64,${imgBase64}`;
+            }
+        }
         return {
             statusCode: 200,
             headers,
