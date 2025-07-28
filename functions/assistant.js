@@ -1,5 +1,13 @@
 const fetch = require('node-fetch');
 
+const enhancePrompt = (raw) => {
+    const lower = raw.toLowerCase();
+    const isRealistic = /(photo|photorealistic|realistic|lifelike)/.test(lower);
+    return isRealistic
+        ? `A high-resolution, photorealistic image of: ${raw.trim()}. Studio lighting, natural texture, sharp detail.`
+        : `A simple, clean, high-quality illustration of: ${raw.trim()}. Cartoon style, bold lines, pastel or primary colors, clear shape definition.`;
+};
+
 exports.handler = async (event) => {
     const headers = {
         "Access-Control-Allow-Origin": "*",
