@@ -135,7 +135,14 @@ exports.handler = async (event) => {
 
         const contentArray = Array.isArray(lastMsg?.content) ? lastMsg.content : [];
 
-        const imagePart = contentArray.find(c => c.type === "image_file") || null;
+        let imagePart = contentArray.find(c => c.type === "image_file") || null;
+        if (!imagePart && Array.isArray(lastMsg.files) && lastMsg.files.length > 0) {
+            imagePart = {
+                image_file: {
+                    file_id: lastMsg.files[0].id
+                }
+            };
+        }
         const textPart = contentArray.find(c => c.type === "text") || null;
 
         let imageUrl = null;
