@@ -1,7 +1,9 @@
 const fetch = require('node-fetch');
 
-function isImageRequest(prompt) {
-    return /draw|illustrate|image|picture|generate.*image|create.*image|change|update/i.test(prompt);
+function isImageRequest(prompt, previousPrompt) {
+    const directImagePrompt = /draw|illustrate|image|picture|generate.*image|create.*image/i.test(prompt);
+    const editRequest = /make.*|change.*|update.*/i.test(prompt);
+    return directImagePrompt || (previousPrompt && editRequest);
 }
 
 function enhancePrompt(prompt) {
@@ -194,7 +196,7 @@ exports.handler = async (event) => {
         let imageUrl = assistantResponse.image;
 
         // Fallback: if no image from assistant and user message indicates image request, generate image via DALL·E 3
-        if (!imageUrl && isImageRequest(userMessage)) {
+        if (!imageUrl && isImageRequest(userMessage, previousPrompt)) {
             try {
                 const imageRes = await fetch("https://api.openai.com/v1/images/generations", {
                     method: "POST",
@@ -204,7 +206,7 @@ exports.handler = async (event) => {
                     },
                     body: JSON.stringify({
                         model: "dall-e-3",
-                        prompt: enhancePrompt(lastImagePrompt ? `${lastImagePrompt}, but ${userMessage}` : userMessage),
+                        prompt: enhancePrompt(previousPrompt ? `${previousPrompt}, but ${userMessage}` : userMessage),
                         n: 1,
                         size: "1024x1024",
                     }),
