@@ -15,6 +15,11 @@ function storeThreadId(id) {
     sessionStorage.setItem('mgl_thread_id', id);
 }
 
+function isImagePrompt(msg) {
+    const imageKeywords = ["draw", "sketch", "illustrate", "render", "create an image", "generate an image", "show me", "picture of", "image of"];
+    return imageKeywords.some(kw => msg.toLowerCase().includes(kw));
+}
+
 async function sendMessage() {
     const input = document.getElementById('user-input');
     const message = input.value.trim();
@@ -37,7 +42,7 @@ async function sendMessage() {
         const response = await fetch('/.netlify/functions/assistant', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message, threadId: getOrCreateThreadId() })
+            body: JSON.stringify({ message, threadId: getOrCreateThreadId(), lastImagePrompt: localStorage.getItem('lastImagePrompt') })
         });
 
         const data = await response.json();
@@ -67,6 +72,10 @@ async function sendMessage() {
                 console.error("🚨 Image failed to load:", data.imageUrl);
             };
             messagesDiv.appendChild(image);
+        }
+
+        if (data.imageUrl && isImagePrompt(message)) {
+            localStorage.setItem('lastImagePrompt', message);
         }
 
         loadingMsg.remove();
