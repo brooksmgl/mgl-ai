@@ -1,7 +1,7 @@
 const fetch = require('node-fetch');
 
 function isImageRequest(prompt) {
-    return /draw|illustrate|image|picture|generate.*image|create.*image/i.test(prompt);
+    return /draw|illustrate|image|picture|generate.*image|create.*image|change|update/i.test(prompt);
 }
 
 function enhancePrompt(prompt) {
@@ -29,6 +29,22 @@ exports.handler = async (event) => {
 
     try {
         const { message: userMessage, threadId } = JSON.parse(event.body || '{}');
+
+        let previousPrompt = null;
+        if (threadId) {
+            const previousMessages = await fetch(`https://api.openai.com/v1/threads/${threadId}/messages`, {
+                headers: {
+                    "Authorization": `Bearer ${OPENAI_KEY}`,
+                    "OpenAI-Beta": "assistants=v2"
+                }
+            }).then(res => res.json());
+
+            const userMsgs = previousMessages.data
+                .filter(msg => msg.role === "user" && Array.isArray(msg.content))
+                .sort((a, b) => b.created_at - a.created_at);
+
+            previousPrompt = userMsgs[1]?.content?.[0]?.text?.value || null;
+        }
 
         if (!userMessage) {
             return {
@@ -188,7 +204,7 @@ exports.handler = async (event) => {
                     },
                     body: JSON.stringify({
                         model: "dall-e-3",
-                        prompt: enhancePrompt(userMessage),
+                        prompt: enhancePrompt(previousPrompt ? `${previousPrompt}, but ${userMessage}` : userMessage),
                         n: 1,
                         size: "1024x1024",
                     }),

@@ -2,6 +2,19 @@ let lastPromptWasImage = false;
 let lastImagePrompt = "";
 let lastThreadId = null;
 
+function getOrCreateThreadId() {
+    let threadId = sessionStorage.getItem('mgl_thread_id');
+    if (!threadId) {
+        // will let backend create it and return one
+        threadId = null;
+    }
+    return threadId;
+}
+
+function storeThreadId(id) {
+    sessionStorage.setItem('mgl_thread_id', id);
+}
+
 async function sendMessage() {
     const input = document.getElementById('user-input');
     const message = input.value.trim();
@@ -24,7 +37,7 @@ async function sendMessage() {
         const response = await fetch('/.netlify/functions/assistant', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message, threadId: lastThreadId })
+            body: JSON.stringify({ message, threadId: getOrCreateThreadId() })
         });
 
         const data = await response.json();
@@ -34,6 +47,7 @@ async function sendMessage() {
         }
 
         lastThreadId = data.threadId;
+        storeThreadId(data.threadId);
 
         if (data.text) {
             const botMsg = document.createElement('div');
@@ -79,3 +93,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
     sendBtn.addEventListener("click", sendMessage);
 });
+
+const resetBtn = document.getElementById("reset-btn");
+if (resetBtn) {
+    resetBtn.addEventListener("click", () => {
+        localStorage.removeItem("mgl_thread_id");
+        lastThreadId = null;
+
+        const messagesDiv = document.getElementById("messages");
+        messagesDiv.innerHTML = "";
+
+        const resetMsg = document.createElement("div");
+        resetMsg.textContent = "Thread reset.";
+        resetMsg.className = "message bot";
+        messagesDiv.appendChild(resetMsg);
+    });
+}
