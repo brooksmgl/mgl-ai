@@ -216,6 +216,7 @@ exports.handler = async (event) => {
                 const imageData = await imageRes.json();
                 if (imageData?.data?.[0]?.url) {
                     imageUrl = imageData.data[0].url;
+                    assistantResponse.image = imageUrl;
                 }
             } catch (error) {
                 console.error("Image generation failed:", error);
