@@ -197,7 +197,9 @@ exports.handler = async (event) => {
         if (!imageUrl && isImageRequest(userMessage, previousPrompt)) {
             try {
                 const editing = previousPrompt && /(make|change|remove|replace|update|edit)/i.test(userMessage);
-                const dallePrompt = editing ? enhancePrompt(`${previousPrompt}, ${userMessage}`) : enhancePrompt(userMessage);
+                const dallePrompt = editing && previousPrompt
+                    ? enhancePrompt(`${previousPrompt}. ${userMessage}`)
+                    : enhancePrompt(userMessage);
 
                 const imageRes = await fetch("https://api.openai.com/v1/images/generations", {
                     method: "POST",
