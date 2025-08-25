@@ -36,6 +36,8 @@ function readFileAsBase64(file) {
 async function sendMessage() {
     const input = document.getElementById('user-input');
     const fileInput = document.getElementById('file-input');
+    const filePreview = document.getElementById('file-preview');
+    const removeIcon = document.getElementById('remove-file');
     const message = input.value.trim();
     const file = fileInput.files[0];
     if (!message && !file) return;
@@ -147,6 +149,13 @@ async function sendMessage() {
           fileInput.value = "";
           const fileIndicator = document.getElementById('file-indicator');
           if (fileIndicator) fileIndicator.textContent = "";
+          if (filePreview) {
+              filePreview.src = '';
+              filePreview.style.display = 'none';
+          }
+          if (removeIcon) {
+              removeIcon.style.display = 'none';
+          }
       } catch (err) {
           loadingMsg.remove();
           const errorMsg = document.createElement('div');
@@ -157,6 +166,13 @@ async function sendMessage() {
           fileInput.value = "";
           const fileIndicator = document.getElementById('file-indicator');
           if (fileIndicator) fileIndicator.textContent = "";
+          if (filePreview) {
+              filePreview.src = '';
+              filePreview.style.display = 'none';
+          }
+          if (removeIcon) {
+              removeIcon.style.display = 'none';
+          }
       }
 }
 
@@ -166,6 +182,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const fileInput = document.getElementById("file-input");
     const fileIndicator = document.getElementById('file-indicator');
+    const filePreview = document.getElementById('file-preview');
+    const removeIcon = document.getElementById('remove-file');
 
     input.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
@@ -177,9 +195,29 @@ document.addEventListener("DOMContentLoaded", () => {
     sendBtn.addEventListener("click", sendMessage);
     fileInput.addEventListener('change', () => {
         if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
             fileIndicator.textContent = `${fileInput.files.length} file selected`;
+            if (file && file.type.startsWith('image/')) {
+                filePreview.src = URL.createObjectURL(file);
+                filePreview.style.display = 'block';
+            } else {
+                filePreview.src = '';
+                filePreview.style.display = 'none';
+            }
+            removeIcon.style.display = 'inline';
         } else {
             fileIndicator.textContent = '';
+            filePreview.src = '';
+            filePreview.style.display = 'none';
+            removeIcon.style.display = 'none';
         }
+    });
+
+    removeIcon.addEventListener('click', () => {
+        fileInput.value = '';
+        fileIndicator.textContent = '';
+        filePreview.src = '';
+        filePreview.style.display = 'none';
+        removeIcon.style.display = 'none';
     });
 });
