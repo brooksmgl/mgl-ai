@@ -163,6 +163,7 @@ async function sendMessage() {
 document.addEventListener("DOMContentLoaded", () => {
     const input = document.getElementById("user-input");
     const sendBtn = document.getElementById("send-btn");
+
     const fileInput = document.getElementById("file-input");
     const fileIndicator = document.getElementById('file-indicator');
 
