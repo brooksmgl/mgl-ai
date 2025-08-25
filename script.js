@@ -33,6 +33,24 @@ function readFileAsBase64(file) {
     });
 }
 
+function resetFileInput() {
+    const fileInput = document.getElementById('file-input');
+    const fileIndicator = document.getElementById('file-indicator');
+    const filePreview = document.getElementById('file-preview');
+    const removeFileBtn = document.getElementById('remove-file-btn');
+    const previewContainer = document.getElementById('file-preview-container');
+
+    if (fileInput) fileInput.value = '';
+    if (fileIndicator) fileIndicator.textContent = '';
+    if (filePreview) {
+        if (filePreview.src) URL.revokeObjectURL(filePreview.src);
+        filePreview.src = '';
+        filePreview.style.display = 'none';
+    }
+    if (removeFileBtn) removeFileBtn.style.display = 'none';
+    if (previewContainer) previewContainer.style.display = 'none';
+}
+
 async function sendMessage() {
     const input = document.getElementById('user-input');
     const fileInput = document.getElementById('file-input');
