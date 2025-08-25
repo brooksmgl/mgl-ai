@@ -240,7 +240,7 @@ exports.handler = async (event) => {
 
         let imageUrl = assistantResponse.image;
 
-        // Fallback: if no image from assistant and user message indicates image request, generate image via DALL-E 3
+        // Fallback: if no image from assistant and user message indicates image request, generate an image via gpt-image-1
         if (!imageUrl && isImageRequest(userMessage, previousPrompt)) {
             try {
                 const editing = previousPrompt && /(make|change|remove|replace|update|edit)/i.test(userMessage);
@@ -248,24 +248,43 @@ exports.handler = async (event) => {
                     ? enhancePrompt(`${previousPrompt}. ${userMessage}`)
                     : enhancePrompt(userMessage);
 
+                const body = {
+                    model: "gpt-image-1",
+                    prompt: dallePrompt,
+                    size: "1024x1024"
+                };
+
+                const images = [];
+                if (attachment) {
+                    images.push({ name: attachmentName || 'upload', data: attachment });
+                } else if (lastImageUrl) {
+                    try {
+                        const prevRes = await fetch(lastImageUrl);
+                        const arrBuf = await prevRes.arrayBuffer();
+                        const b64 = Buffer.from(arrBuf).toString('base64');
+                        images.push({ name: 'previous.png', data: b64 });
+                    } catch (err) {
+                        console.error('Failed to fetch previous image:', err);
+                    }
+                }
+
+                if (images.length > 0) {
+                    body.images = images;
+                }
+
                 const imageRes = await fetch("https://api.openai.com/v1/images/generations", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                         Authorization: `Bearer ${OPENAI_KEY}`,
                     },
-                    body: JSON.stringify({
-                        model: "dall-e-3",
-                        prompt: dallePrompt,
-                        n: 1,
-                        size: "1024x1024"
-                    }),
+                    body: JSON.stringify(body),
                 });
 
                 if (!imageRes.ok) {
                     const errText = await imageRes.text();
                     console.error("Image API error response:", errText);
-                    throw new Error("DALL-E image generation failed.");
+                    throw new Error("gpt-image-1 generation failed.");
                 }
 
                 let imageData;
