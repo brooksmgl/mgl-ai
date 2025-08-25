@@ -54,8 +54,6 @@ function resetFileInput() {
 async function sendMessage() {
     const input = document.getElementById('user-input');
     const fileInput = document.getElementById('file-input');
-    const filePreview = document.getElementById('file-preview');
-    const removeIcon = document.getElementById('remove-file');
     const message = input.value.trim();
     const file = fileInput.files[0];
     if (!message && !file) return;
@@ -162,46 +160,30 @@ async function sendMessage() {
         if (data.imageUrl && isImagePrompt(message)) {
             lastImagePrompt = message;
         }
-
-          loadingMsg.remove();
-          fileInput.value = "";
-          const fileIndicator = document.getElementById('file-indicator');
-          if (fileIndicator) fileIndicator.textContent = "";
-          if (filePreview) {
-              filePreview.src = '';
-              filePreview.style.display = 'none';
-          }
-          if (removeIcon) {
-              removeIcon.style.display = 'none';
-          }
-      } catch (err) {
-          loadingMsg.remove();
-          const errorMsg = document.createElement('div');
-          errorMsg.textContent = `Error: ${err.message}`;
-          errorMsg.className = 'message bot';
-          messagesDiv.appendChild(errorMsg);
-          console.error(err);
-          fileInput.value = "";
-          const fileIndicator = document.getElementById('file-indicator');
-          if (fileIndicator) fileIndicator.textContent = "";
-          if (filePreview) {
-              filePreview.src = '';
-              filePreview.style.display = 'none';
-          }
-          if (removeIcon) {
-              removeIcon.style.display = 'none';
-          }
-      }
+    } catch (err) {
+        const errorMsg = document.createElement('div');
+        errorMsg.textContent = `Error: ${err.message}`;
+        errorMsg.className = 'message bot';
+        messagesDiv.appendChild(errorMsg);
+        console.error(err);
+    } finally {
+        loadingMsg.remove();
+        resetFileInput();
+    }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+    // Ensure a fresh session on each page load
+    sessionStorage.removeItem('mgl_thread_id');
+
     const input = document.getElementById("user-input");
     const sendBtn = document.getElementById("send-btn");
 
     const fileInput = document.getElementById("file-input");
     const fileIndicator = document.getElementById('file-indicator');
     const filePreview = document.getElementById('file-preview');
-    const removeIcon = document.getElementById('remove-file');
+    const removeFileBtn = document.getElementById('remove-file-btn');
+    const previewContainer = document.getElementById('file-preview-container');
 
     input.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
@@ -211,6 +193,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     sendBtn.addEventListener("click", sendMessage);
+
     fileInput.addEventListener('change', () => {
         if (fileInput.files.length > 0) {
             const file = fileInput.files[0];
@@ -218,24 +201,17 @@ document.addEventListener("DOMContentLoaded", () => {
             if (file && file.type.startsWith('image/')) {
                 filePreview.src = URL.createObjectURL(file);
                 filePreview.style.display = 'block';
+                previewContainer.style.display = 'block';
             } else {
                 filePreview.src = '';
                 filePreview.style.display = 'none';
+                previewContainer.style.display = 'none';
             }
-            removeIcon.style.display = 'inline';
+            removeFileBtn.style.display = 'block';
         } else {
-            fileIndicator.textContent = '';
-            filePreview.src = '';
-            filePreview.style.display = 'none';
-            removeIcon.style.display = 'none';
+            resetFileInput();
         }
     });
 
-    removeIcon.addEventListener('click', () => {
-        fileInput.value = '';
-        fileIndicator.textContent = '';
-        filePreview.src = '';
-        filePreview.style.display = 'none';
-        removeIcon.style.display = 'none';
-    });
+    removeFileBtn.addEventListener('click', resetFileInput);
 });
