@@ -46,7 +46,14 @@ async function sendMessage() {
             body: JSON.stringify({ message, threadId: getOrCreateThreadId(), lastImagePrompt, lastImageUrl })
         });
 
-        const data = await response.json();
+        const text = await response.text();
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch {
+            console.warn('Non-JSON response:', text);
+            data = { error: text };
+        }
 
         if (!response.ok || data.error) {
             throw new Error(data.error || `HTTP ${response.status}`);
