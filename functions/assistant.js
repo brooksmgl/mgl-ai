@@ -96,35 +96,21 @@ exports.handler = async (event) => {
             console.log("Reusing thread:", thread_id);
         }
 
-        let fileId = null;
-        if (attachment) {
-            try {
-                const buffer = Buffer.from(attachment, 'base64');
-                const file = new File([buffer], attachmentName || 'upload', { type: attachmentType || 'application/octet-stream' });
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('purpose', 'assistants');
-                const uploadRes = await fetch('https://api.openai.com/v1/files', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${OPENAI_KEY}`,
-                        'OpenAI-Beta': 'assistants=v2'
-                    },
-                    body: formData
-                }).then(res => res.json());
-                fileId = uploadRes.id;
-            } catch (err) {
-                console.error('File upload failed:', err);
-            }
-        }
-
         const msgPayload = {
             role: "user",
-            content: userMessage ? [{ type: "input_text", text: userMessage }] : []
+            content: []
         };
 
-        if (fileId) {
-            msgPayload.attachments = [{ file_id: fileId }];
+        if (userMessage) {
+            msgPayload.content.push({ type: "input_text", text: userMessage });
+        }
+
+        if (attachment) {
+            const mime = attachmentType || 'image/png';
+            msgPayload.content.push({
+                type: "input_image",
+                image_url: `data:${mime};base64,${attachment}`
+            });
         }
 
         await fetch(`https://api.openai.com/v1/threads/${thread_id}/messages`, {
