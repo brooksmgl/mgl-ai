@@ -49,7 +49,10 @@ exports.handler = async (event) => {
                 .filter(msg => msg.role === "user" && Array.isArray(msg.content))
                 .sort((a, b) => b.created_at - a.created_at);
 
-            previousPrompt = userMsgs[1]?.content?.[0]?.text?.value || null;
+            const lastUserMsg = userMsgs[0];
+            if (lastUserMsg?.content?.[0]?.text?.value) {
+                previousPrompt = lastUserMsg.content[0].text.value;
+            }
         }
 
         if (!userMessage) {
