@@ -1,5 +1,3 @@
-const fetch = require('node-fetch');
-
 function isImageRequest(prompt, previousPrompt) {
     const directImagePrompt = /draw|illustrate|image|picture|generate.*image|create.*image/i.test(prompt);
     const editRequest = /(make|change|remove|replace|update|edit)(.*image|.*it|)/i.test(prompt);
@@ -34,7 +32,15 @@ exports.handler = async (event) => {
     try {
         const OPENAI_KEY = process.env.OPENAI_API_KEY;
         const ASSISTANT_ID = process.env.OPENAI_ASSISTANT_ID;
-        const { message: userMessage, threadId, lastImagePrompt, lastImageUrl } = JSON.parse(event.body || '{}');
+        const {
+            message: userMessage,
+            threadId,
+            lastImagePrompt,
+            lastImageUrl,
+            attachment,
+            attachmentName,
+            attachmentType
+        } = JSON.parse(event.body || '{}');
 
         let previousPrompt = lastImagePrompt || null;
         if (threadId) {
@@ -55,7 +61,7 @@ exports.handler = async (event) => {
             }
         }
 
-        if (!userMessage) {
+        if (!userMessage && !attachment) {
             return {
                 statusCode: 400,
                 headers,
@@ -90,6 +96,37 @@ exports.handler = async (event) => {
             console.log("Reusing thread:", thread_id);
         }
 
+        let fileId = null;
+        if (attachment) {
+            try {
+                const buffer = Buffer.from(attachment, 'base64');
+                const file = new File([buffer], attachmentName || 'upload', { type: attachmentType || 'application/octet-stream' });
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('purpose', 'assistants');
+                const uploadRes = await fetch('https://api.openai.com/v1/files', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${OPENAI_KEY}`,
+                        'OpenAI-Beta': 'assistants=v2'
+                    },
+                    body: formData
+                }).then(res => res.json());
+                fileId = uploadRes.id;
+            } catch (err) {
+                console.error('File upload failed:', err);
+            }
+        }
+
+        const msgPayload = {
+            role: "user",
+            content: userMessage ? [{ type: "input_text", text: userMessage }] : []
+        };
+
+        if (fileId) {
+            msgPayload.attachments = [{ file_id: fileId }];
+        }
+
         await fetch(`https://api.openai.com/v1/threads/${thread_id}/messages`, {
             method: "POST",
             headers: {
@@ -97,10 +134,7 @@ exports.handler = async (event) => {
                 "Content-Type": "application/json",
                 "OpenAI-Beta": "assistants=v2"
             },
-            body: JSON.stringify({
-                role: "user",
-                content: userMessage
-            })
+            body: JSON.stringify(msgPayload)
         });
 
         const runRes = await fetch(`https://api.openai.com/v1/threads/${thread_id}/runs`, {
