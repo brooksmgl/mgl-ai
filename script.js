@@ -33,6 +33,24 @@ function readFileAsBase64(file) {
     });
 }
 
+function resetFileInput() {
+    const fileInput = document.getElementById('file-input');
+    const fileIndicator = document.getElementById('file-indicator');
+    const filePreview = document.getElementById('file-preview');
+    const removeFileBtn = document.getElementById('remove-file-btn');
+    const previewContainer = document.getElementById('file-preview-container');
+
+    if (fileInput) fileInput.value = '';
+    if (fileIndicator) fileIndicator.textContent = '';
+    if (filePreview) {
+        if (filePreview.src) URL.revokeObjectURL(filePreview.src);
+        filePreview.src = '';
+        filePreview.style.display = 'none';
+    }
+    if (removeFileBtn) removeFileBtn.style.display = 'none';
+    if (previewContainer) previewContainer.style.display = 'none';
+}
+
 async function sendMessage() {
     const input = document.getElementById('user-input');
     const fileInput = document.getElementById('file-input');
@@ -144,9 +162,7 @@ async function sendMessage() {
         }
 
           loadingMsg.remove();
-          fileInput.value = "";
-          const fileIndicator = document.getElementById('file-indicator');
-          if (fileIndicator) fileIndicator.textContent = "";
+          resetFileInput();
       } catch (err) {
           loadingMsg.remove();
           const errorMsg = document.createElement('div');
@@ -154,9 +170,7 @@ async function sendMessage() {
           errorMsg.className = 'message bot';
           messagesDiv.appendChild(errorMsg);
           console.error(err);
-          fileInput.value = "";
-          const fileIndicator = document.getElementById('file-indicator');
-          if (fileIndicator) fileIndicator.textContent = "";
+          resetFileInput();
       }
 }
 
@@ -166,6 +180,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const fileInput = document.getElementById("file-input");
     const fileIndicator = document.getElementById('file-indicator');
+    const filePreview = document.getElementById('file-preview');
+    const removeFileBtn = document.getElementById('remove-file-btn');
+    const previewContainer = document.getElementById('file-preview-container');
 
     input.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
@@ -176,10 +193,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
     sendBtn.addEventListener("click", sendMessage);
     fileInput.addEventListener('change', () => {
-        if (fileInput.files.length > 0) {
-            fileIndicator.textContent = `${fileInput.files.length} file selected`;
+        const file = fileInput.files[0];
+        if (file) {
+            fileIndicator.textContent = file.name;
+            if (previewContainer) previewContainer.style.display = 'inline-block';
+            if (removeFileBtn) removeFileBtn.style.display = 'block';
+            if (file.type.startsWith('image/')) {
+                if (filePreview) {
+                    filePreview.src = URL.createObjectURL(file);
+                    filePreview.style.display = 'block';
+                }
+            } else if (filePreview) {
+                filePreview.src = '';
+                filePreview.style.display = 'none';
+            }
         } else {
-            fileIndicator.textContent = '';
+            resetFileInput();
         }
     });
+
+    if (removeFileBtn) {
+        removeFileBtn.addEventListener('click', resetFileInput);
+    }
 });

@@ -59,6 +59,38 @@ input[type="text"] {
   color: #555;
 }
 
+.file-preview-container {
+  position: relative;
+  display: none;
+  width: 60px;
+  height: 60px;
+}
+
+.file-preview {
+  max-width: 60px;
+  max-height: 60px;
+  margin-right: 8px;
+  border-radius: 4px;
+  display: none;
+}
+
+.remove-file-btn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 12px;
+  line-height: 16px;
+  text-align: center;
+  cursor: pointer;
+  display: none;
+}
+
 #send-btn {
   background-color: #c55982;
   border: none;
