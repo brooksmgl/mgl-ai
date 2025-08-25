@@ -54,6 +54,11 @@ input[type="text"] {
   user-select: none;
 }
 
+.file-indicator {
+  font-size: 14px;
+  color: #555;
+}
+
 #send-btn {
   background-color: #c55982;
   border: none;

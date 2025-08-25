@@ -143,16 +143,21 @@ async function sendMessage() {
             lastImagePrompt = message;
         }
 
-        loadingMsg.remove();
-        fileInput.value = "";
-    } catch (err) {
-        loadingMsg.remove();
-        const errorMsg = document.createElement('div');
-        errorMsg.textContent = `Error: ${err.message}`;
-        errorMsg.className = 'message bot';
-        messagesDiv.appendChild(errorMsg);
-        console.error(err);
-    }
+loadingMsg.remove();
+fileInput.value = "";
+const fileIndicator = document.getElementById('file-indicator');
+if (fileIndicator) fileIndicator.textContent = "";
+} catch (err) {
+  loadingMsg.remove();
+  const errorMsg = document.createElement('div');
+  errorMsg.textContent = `Error: ${err.message}`;
+  errorMsg.className = 'message bot';
+  messagesDiv.appendChild(errorMsg);
+  console.error(err);
+  fileInput.value = "";
+  const fileIndicator = document.getElementById('file-indicator');
+  if (fileIndicator) fileIndicator.textContent = "";
+}
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -160,6 +165,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const sendBtn = document.getElementById("send-btn");
     const uploadBtn = document.querySelector(".upload-btn");
     const fileInput = document.getElementById("file-input");
+const fileIndicator = document.getElementById('file-indicator');
 
     input.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
@@ -170,4 +176,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     sendBtn.addEventListener("click", sendMessage);
     uploadBtn.addEventListener("click", () => fileInput.click());
+fileInput.addEventListener('change', () => {
+  if (fileInput.files.length > 0) {
+    fileIndicator.textContent = `${fileInput.files.length} file selected`;
+  } else {
+    fileIndicator.textContent = '';
+  }
+});
 });
