@@ -2,9 +2,11 @@ const fetch = require('node-fetch');
 
 function isImageRequest(prompt, previousPrompt) {
     const directImagePrompt = /draw|illustrate|image|picture|generate.*image|create.*image/i.test(prompt);
-    const editRequest = /(make|change|remove|replace|update|edit).*image/i.test(prompt);
-    return directImagePrompt || (previousPrompt && editRequest);
+    const editRequest = /(make|change|remove|replace|update|edit)(.*image|.*it|)/i.test(prompt);
+    return directImagePrompt || (!!previousPrompt && editRequest);
 }
+
+exports.isImageRequest = isImageRequest;
 
 function enhancePrompt(prompt) {
     return `In a cute, cartoon, craft-friendly style: ${prompt}`;
@@ -67,18 +69,23 @@ exports.handler = async (event) => {
             };
         }
 
-        const threadRes = await fetch("https://api.openai.com/v1/threads", {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${OPENAI_KEY}`,
-                "Content-Type": "application/json",
-                "OpenAI-Beta": "assistants=v2"
-            }
-        }).then(res => res.json());
+        let thread_id = threadId;
+        if (!thread_id) {
+            const threadRes = await fetch("https://api.openai.com/v1/threads", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${OPENAI_KEY}`,
+                    "Content-Type": "application/json",
+                    "OpenAI-Beta": "assistants=v2"
+                }
+            }).then(res => res.json());
 
-        console.log("THREAD RESPONSE:", threadRes);
+            console.log("THREAD RESPONSE:", threadRes);
 
-        const thread_id = threadRes.id;
+            thread_id = threadRes.id;
+        } else {
+            console.log("Reusing thread:", thread_id);
+        }
 
         await fetch(`https://api.openai.com/v1/threads/${thread_id}/messages`, {
             method: "POST",
@@ -168,14 +175,17 @@ exports.handler = async (event) => {
             image: null
         };
 
-        // Attempt to find image file in content or files
+        // Attempt to find image file in content or any of the response files
         let imagePart = contentArray.find(c => c.type === "image_file") || null;
         if (!imagePart && Array.isArray(lastMsg.files) && lastMsg.files.length > 0) {
-            imagePart = {
-                image_file: {
-                    file_id: lastMsg.files[0].id
-                }
-            };
+            const imageFile = lastMsg.files.find(f => (f?.content_type || "").startsWith("image/"));
+            if (imageFile) {
+                imagePart = {
+                    image_file: {
+                        file_id: imageFile.id
+                    }
+                };
+            }
         }
 
         if (imagePart?.image_file?.file_id) {
@@ -193,7 +203,7 @@ exports.handler = async (event) => {
 
         let imageUrl = assistantResponse.image;
 
-        // Fallback: if no image from assistant and user message indicates image request, generate image via DALL·E 3
+        // Fallback: if no image from assistant and user message indicates image request, generate image via DALL-E 3
         if (!imageUrl && isImageRequest(userMessage, previousPrompt)) {
             try {
                 const editing = previousPrompt && /(make|change|remove|replace|update|edit)/i.test(userMessage);
@@ -218,7 +228,7 @@ exports.handler = async (event) => {
                 if (!imageRes.ok) {
                     const errText = await imageRes.text();
                     console.error("Image API error response:", errText);
-                    throw new Error("DALL·E image generation failed.");
+                    throw new Error("DALL-E image generation failed.");
                 }
 
                 let imageData;
