@@ -54,6 +54,8 @@ function resetFileInput() {
 async function sendMessage() {
     const input = document.getElementById('user-input');
     const fileInput = document.getElementById('file-input');
+    const filePreview = document.getElementById('file-preview');
+    const removeIcon = document.getElementById('remove-file');
     const message = input.value.trim();
     const file = fileInput.files[0];
     if (!message && !file) return;
@@ -162,7 +164,16 @@ async function sendMessage() {
         }
 
           loadingMsg.remove();
-          resetFileInput();
+          fileInput.value = "";
+          const fileIndicator = document.getElementById('file-indicator');
+          if (fileIndicator) fileIndicator.textContent = "";
+          if (filePreview) {
+              filePreview.src = '';
+              filePreview.style.display = 'none';
+          }
+          if (removeIcon) {
+              removeIcon.style.display = 'none';
+          }
       } catch (err) {
           loadingMsg.remove();
           const errorMsg = document.createElement('div');
@@ -170,7 +181,16 @@ async function sendMessage() {
           errorMsg.className = 'message bot';
           messagesDiv.appendChild(errorMsg);
           console.error(err);
-          resetFileInput();
+          fileInput.value = "";
+          const fileIndicator = document.getElementById('file-indicator');
+          if (fileIndicator) fileIndicator.textContent = "";
+          if (filePreview) {
+              filePreview.src = '';
+              filePreview.style.display = 'none';
+          }
+          if (removeIcon) {
+              removeIcon.style.display = 'none';
+          }
       }
 }
 
@@ -181,8 +201,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const fileInput = document.getElementById("file-input");
     const fileIndicator = document.getElementById('file-indicator');
     const filePreview = document.getElementById('file-preview');
-    const removeFileBtn = document.getElementById('remove-file-btn');
-    const previewContainer = document.getElementById('file-preview-container');
+    const removeIcon = document.getElementById('remove-file');
 
     input.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
@@ -193,26 +212,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
     sendBtn.addEventListener("click", sendMessage);
     fileInput.addEventListener('change', () => {
-        const file = fileInput.files[0];
-        if (file) {
-            fileIndicator.textContent = file.name;
-            if (previewContainer) previewContainer.style.display = 'inline-block';
-            if (removeFileBtn) removeFileBtn.style.display = 'block';
-            if (file.type.startsWith('image/')) {
-                if (filePreview) {
-                    filePreview.src = URL.createObjectURL(file);
-                    filePreview.style.display = 'block';
-                }
-            } else if (filePreview) {
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            fileIndicator.textContent = `${fileInput.files.length} file selected`;
+            if (file && file.type.startsWith('image/')) {
+                filePreview.src = URL.createObjectURL(file);
+                filePreview.style.display = 'block';
+            } else {
                 filePreview.src = '';
                 filePreview.style.display = 'none';
             }
+            removeIcon.style.display = 'inline';
         } else {
-            resetFileInput();
+            fileIndicator.textContent = '';
+            filePreview.src = '';
+            filePreview.style.display = 'none';
+            removeIcon.style.display = 'none';
         }
     });
 
-    if (removeFileBtn) {
-        removeFileBtn.addEventListener('click', resetFileInput);
-    }
+    removeIcon.addEventListener('click', () => {
+        fileInput.value = '';
+        fileIndicator.textContent = '';
+        filePreview.src = '';
+        filePreview.style.display = 'none';
+        removeIcon.style.display = 'none';
+    });
 });
