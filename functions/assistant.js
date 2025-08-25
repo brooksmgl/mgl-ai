@@ -120,11 +120,15 @@ exports.handler = async (event) => {
 
         const msgPayload = {
             role: "user",
-            content: userMessage ? [{ type: "input_text", text: userMessage }] : []
+            content: []
         };
 
+        if (userMessage) {
+            msgPayload.content.push({ type: "input_text", text: userMessage });
+        }
+
         if (fileId) {
-            msgPayload.attachments = [{ file_id: fileId }];
+            msgPayload.content.push({ type: "input_image", image: { file_id: fileId } });
         }
 
         await fetch(`https://api.openai.com/v1/threads/${thread_id}/messages`, {
