@@ -149,12 +149,31 @@ exports.handler = async (event) => {
             content: []
         };
 
+        // According to OpenAI docs, content blocks should follow
+        // { type: "input_text", text: { value: userMessage } }
         if (userMessage) {
-            msgPayload.content.push({ type: "input_text", text: userMessage });
+            msgPayload.content.push({ type: "input_text", text: { value: userMessage } });
         }
 
         if (fileId) {
             msgPayload.content.push({ type: "input_image", image: { file_id: fileId } });
+        }
+
+        if (!Array.isArray(msgPayload.content) || msgPayload.content.length === 0) {
+            throw new Error("Cannot send message: content array is empty.");
+        }
+
+        const malformed = msgPayload.content.some(block => {
+            if (block.type === "input_text") {
+                return !block.text || typeof block.text.value !== "string";
+            }
+            if (block.type === "input_image") {
+                return !block.image || typeof block.image.file_id !== "string";
+            }
+            return true;
+        });
+        if (malformed) {
+            throw new Error("Cannot send message: content has invalid structure.");
         }
 
         const msgResp = await fetch(`https://api.openai.com/v1/threads/${thread_id}/messages`, {
