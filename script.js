@@ -1,6 +1,7 @@
 let imagePromptHistory = [];
 let lastThreadId = null;
 let lastImageUrl = "";
+let lastImageBase64 = "";
 
 function getOrCreateThreadId() {
     let threadId = sessionStorage.getItem('mgl_thread_id');
@@ -29,6 +30,18 @@ function readFileAsBase64(file) {
         };
         reader.onerror = reject;
         reader.readAsDataURL(file);
+    });
+}
+
+function readBlobAsBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const result = reader.result.split(',')[1];
+            resolve(result);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
     });
 }
 
@@ -104,7 +117,8 @@ async function sendMessage() {
             message,
             threadId: getOrCreateThreadId(),
             promptHistory: imagePromptHistory,
-            lastImageUrl
+            lastImageUrl,
+            lastImageBase64
         };
 
         if (attachment) {
@@ -154,6 +168,14 @@ async function sendMessage() {
             };
             messagesDiv.appendChild(image);
             lastImageUrl = data.imageUrl;
+            try {
+                const imgRes = await fetch(data.imageUrl);
+                const imgBlob = await imgRes.blob();
+                lastImageBase64 = await readBlobAsBase64(imgBlob);
+            } catch (err) {
+                console.error("Failed to convert image to base64:", err);
+                lastImageBase64 = "";
+            }
         }
 
         if (data.imageUrl) {
