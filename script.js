@@ -130,6 +130,11 @@ async function sendMessage() {
         });
 
         const text = await response.text();
+        if (!response.ok) {
+            console.error('Assistant function error:', text);
+            throw new Error(text || `HTTP ${response.status}`);
+        }
+
         let data;
         try {
             data = JSON.parse(text);
@@ -138,8 +143,8 @@ async function sendMessage() {
             data = { error: text };
         }
 
-        if (!response.ok || data.error) {
-            throw new Error(data.error || `HTTP ${response.status}`);
+        if (data.error) {
+            throw new Error(data.error);
         }
 
         lastThreadId = data.threadId;
@@ -166,6 +171,9 @@ async function sendMessage() {
             lastImageUrl = data.imageUrl;
             try {
                 const imgRes = await fetch(data.imageUrl);
+                if (!imgRes.ok) {
+                    throw new Error(`Image fetch failed: ${imgRes.status}`);
+                }
                 const imgBlob = await imgRes.blob();
                 lastImageBase64 = await readBlobAsBase64(imgBlob);
             } catch (err) {

@@ -56,17 +56,25 @@ exports.handler = async (event) => {
 
         let thread_id = threadId;
         if (!thread_id) {
-            const threadRes = await fetch("https://api.openai.com/v1/threads", {
+            const threadResp = await fetch("https://api.openai.com/v1/threads", {
                 method: "POST",
                 headers: {
                     "Authorization": `Bearer ${OPENAI_KEY}`,
                     "Content-Type": "application/json",
                     "OpenAI-Beta": "assistants=v2"
                 }
-            }).then(res => res.json());
-
+            });
+            if (!threadResp.ok) {
+                const errText = await threadResp.text();
+                console.error("Thread creation failed:", errText);
+                return {
+                    statusCode: threadResp.status,
+                    headers,
+                    body: JSON.stringify({ error: "Failed to create thread" })
+                };
+            }
+            const threadRes = await threadResp.json();
             console.log("THREAD RESPONSE:", threadRes);
-
             thread_id = threadRes.id;
         } else {
             console.log("Reusing thread:", thread_id);
@@ -80,17 +88,32 @@ exports.handler = async (event) => {
                 const formData = new FormData();
                 formData.append('file', file);
                 formData.append('purpose', 'assistants');
-                const uploadRes = await fetch('https://api.openai.com/v1/files', {
+                const uploadResp = await fetch('https://api.openai.com/v1/files', {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${OPENAI_KEY}`,
                         'OpenAI-Beta': 'assistants=v2'
                     },
                     body: formData
-                }).then(res => res.json());
+                });
+                if (!uploadResp.ok) {
+                    const errText = await uploadResp.text();
+                    console.error('File upload failed:', errText);
+                    return {
+                        statusCode: uploadResp.status,
+                        headers,
+                        body: JSON.stringify({ error: 'File upload failed' })
+                    };
+                }
+                const uploadRes = await uploadResp.json();
                 fileId = uploadRes.id;
             } catch (err) {
                 console.error('File upload failed:', err);
+                return {
+                    statusCode: 500,
+                    headers,
+                    body: JSON.stringify({ error: 'File upload failed' })
+                };
             }
         }
 
@@ -107,7 +130,7 @@ exports.handler = async (event) => {
             msgPayload.content.push({ type: "input_image", image: { file_id: fileId } });
         }
 
-        await fetch(`https://api.openai.com/v1/threads/${thread_id}/messages`, {
+        const msgResp = await fetch(`https://api.openai.com/v1/threads/${thread_id}/messages`, {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${OPENAI_KEY}`,
@@ -116,8 +139,17 @@ exports.handler = async (event) => {
             },
             body: JSON.stringify(msgPayload)
         });
+        if (!msgResp.ok) {
+            const errText = await msgResp.text();
+            console.error('Failed to post message:', errText);
+            return {
+                statusCode: msgResp.status,
+                headers,
+                body: JSON.stringify({ error: 'Failed to post message to thread' })
+            };
+        }
 
-        const runRes = await fetch(`https://api.openai.com/v1/threads/${thread_id}/runs`, {
+        const runResp = await fetch(`https://api.openai.com/v1/threads/${thread_id}/runs`, {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${OPENAI_KEY}`,
@@ -125,7 +157,17 @@ exports.handler = async (event) => {
                 "OpenAI-Beta": "assistants=v2"
             },
             body: JSON.stringify({ assistant_id: ASSISTANT_ID })
-        }).then(res => res.json());
+        });
+        if (!runResp.ok) {
+            const errText = await runResp.text();
+            console.error('Failed to start run:', errText);
+            return {
+                statusCode: runResp.status,
+                headers,
+                body: JSON.stringify({ error: 'Failed to start run' })
+            };
+        }
+        const runRes = await runResp.json();
 
         console.log("RUN RESPONSE:", runRes);
 
@@ -141,13 +183,22 @@ exports.handler = async (event) => {
 
         while (progressingStatuses.has(status) && attempts < maxAttempts) {
             await new Promise(resolve => setTimeout(resolve, 1000));
-            const checkRes = await fetch(`https://api.openai.com/v1/threads/${thread_id}/runs/${run_id}`, {
+            const checkResp = await fetch(`https://api.openai.com/v1/threads/${thread_id}/runs/${run_id}`, {
                 headers: {
                     "Authorization": `Bearer ${OPENAI_KEY}`,
                     "OpenAI-Beta": "assistants=v2"
                 }
             });
-            lastCheck = await checkRes.json();
+            if (!checkResp.ok) {
+                const errText = await checkResp.text();
+                console.error('Run status check failed:', errText);
+                return {
+                    statusCode: checkResp.status,
+                    headers,
+                    body: JSON.stringify({ error: 'Failed to check run status' })
+                };
+            }
+            lastCheck = await checkResp.json();
             status = lastCheck.status;
             attempts++;
         }
@@ -177,12 +228,22 @@ exports.handler = async (event) => {
             };
         }
 
-        const messagesRes = await fetch(`https://api.openai.com/v1/threads/${thread_id}/messages`, {
+        const messagesResp = await fetch(`https://api.openai.com/v1/threads/${thread_id}/messages`, {
             headers: {
                 "Authorization": `Bearer ${OPENAI_KEY}`,
                 "OpenAI-Beta": "assistants=v2"
             }
-        }).then(res => res.json());
+        });
+        if (!messagesResp.ok) {
+            const errText = await messagesResp.text();
+            console.error('Failed to retrieve messages:', errText);
+            return {
+                statusCode: messagesResp.status,
+                headers,
+                body: JSON.stringify({ error: 'Failed to retrieve messages' })
+            };
+        }
+        const messagesRes = await messagesResp.json();
 
         console.log("MESSAGES RESPONSE:", JSON.stringify(messagesRes, null, 2));
 
@@ -227,14 +288,23 @@ exports.handler = async (event) => {
         }
 
         if (imagePart?.image_file?.file_id) {
-            const imageRes = await fetch(`https://api.openai.com/v1/files/${imagePart.image_file.file_id}/content`, {
+            const imageResp = await fetch(`https://api.openai.com/v1/files/${imagePart.image_file.file_id}/content`, {
                 method: "GET",
                 headers: {
                     "Authorization": `Bearer ${OPENAI_KEY}`,
                     "OpenAI-Beta": "assistants=v2"
                 }
             });
-            const buffer = await imageRes.buffer();
+            if (!imageResp.ok) {
+                const errText = await imageResp.text();
+                console.error('Failed to fetch image content:', errText);
+                return {
+                    statusCode: imageResp.status,
+                    headers,
+                    body: JSON.stringify({ error: 'Failed to fetch image content' })
+                };
+            }
+            const buffer = await imageResp.buffer();
             const base64Image = Buffer.from(buffer).toString('base64');
             assistantResponse.image = `data:image/png;base64,${base64Image}`;
         }
@@ -261,12 +331,22 @@ exports.handler = async (event) => {
                     images.push({ name: 'previous.png', data: lastImageBase64 });
                 } else if (lastImageUrl) {
                     try {
-                        const prevRes = await fetch(lastImageUrl);
-                        const arrBuf = await prevRes.arrayBuffer();
+                        const prevResp = await fetch(lastImageUrl);
+                        if (!prevResp.ok) {
+                            const errText = await prevResp.text();
+                            console.error('Failed to fetch previous image:', errText);
+                            throw new Error('Failed to fetch previous image');
+                        }
+                        const arrBuf = await prevResp.arrayBuffer();
                         const b64 = Buffer.from(arrBuf).toString('base64');
                         images.push({ name: 'previous.png', data: b64 });
                     } catch (err) {
                         console.error('Failed to fetch previous image:', err);
+                        return {
+                            statusCode: 500,
+                            headers,
+                            body: JSON.stringify({ error: 'Failed to fetch previous image' })
+                        };
                     }
                 }
 
@@ -274,7 +354,7 @@ exports.handler = async (event) => {
                     body.images = images;
                 }
 
-                const imageRes = await fetch("https://api.openai.com/v1/images/generations", {
+                const imageResp = await fetch("https://api.openai.com/v1/images/generations", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -283,15 +363,15 @@ exports.handler = async (event) => {
                     body: JSON.stringify(body),
                 });
 
-                if (!imageRes.ok) {
-                    const errText = await imageRes.text();
+                if (!imageResp.ok) {
+                    const errText = await imageResp.text();
                     console.error("Image API error response:", errText);
                     throw new Error("gpt-image-1 generation failed.");
                 }
 
                 let imageData;
                 try {
-                    imageData = await imageRes.json();
+                    imageData = await imageResp.json();
                 } catch (jsonErr) {
                     console.error("Failed to parse image JSON:", jsonErr);
                     throw new Error("Invalid image response from OpenAI.");
