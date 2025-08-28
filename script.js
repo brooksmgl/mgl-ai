@@ -1,5 +1,4 @@
-let lastPromptWasImage = false;
-let lastImagePrompt = "";
+let imagePromptHistory = [];
 let lastThreadId = null;
 let lastImageUrl = "";
 
@@ -104,7 +103,7 @@ async function sendMessage() {
         const payload = {
             message,
             threadId: getOrCreateThreadId(),
-            lastImagePrompt,
+            promptHistory: imagePromptHistory,
             lastImageUrl
         };
 
@@ -157,8 +156,12 @@ async function sendMessage() {
             lastImageUrl = data.imageUrl;
         }
 
-        if (data.imageUrl && isImagePrompt(message)) {
-            lastImagePrompt = message;
+        if (data.imageUrl) {
+            if (isImagePrompt(message)) {
+                imagePromptHistory = [message];
+            } else if (imagePromptHistory.length > 0) {
+                imagePromptHistory.push(message);
+            }
         }
     } catch (err) {
         const errorMsg = document.createElement('div');

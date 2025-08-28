@@ -1,7 +1,7 @@
-function isImageRequest(prompt, previousPrompt) {
+function isImageRequest(prompt, promptHistory = []) {
     const directImagePrompt = /draw|illustrate|image|picture|generate.*image|create.*image/i.test(prompt);
     const editRequest = /(make|change|remove|replace|update|edit)(.*image|.*it|)/i.test(prompt);
-    return directImagePrompt || (!!previousPrompt && editRequest);
+    return directImagePrompt || (promptHistory.length > 0 && editRequest);
 }
 
 exports.isImageRequest = isImageRequest;
@@ -35,31 +35,12 @@ exports.handler = async (event) => {
         const {
             message: userMessage,
             threadId,
-            lastImagePrompt,
+            promptHistory = [],
             lastImageUrl,
             attachment,
             attachmentName,
             attachmentType
         } = JSON.parse(event.body || '{}');
-
-        let previousPrompt = lastImagePrompt || null;
-        if (threadId) {
-            const previousMessages = await fetch(`https://api.openai.com/v1/threads/${threadId}/messages`, {
-                headers: {
-                    "Authorization": `Bearer ${OPENAI_KEY}`,
-                    "OpenAI-Beta": "assistants=v2"
-                }
-            }).then(res => res.json());
-
-            const userMsgs = previousMessages.data
-                .filter(msg => msg.role === "user" && Array.isArray(msg.content))
-                .sort((a, b) => b.created_at - a.created_at);
-
-            const lastUserMsg = userMsgs[0];
-            if (lastUserMsg?.content?.[0]?.text?.value) {
-                previousPrompt = lastUserMsg.content[0].text.value;
-            }
-        }
 
         if (!userMessage && !attachment) {
             return {
@@ -266,12 +247,11 @@ exports.handler = async (event) => {
         let imageUrl = assistantResponse.image;
 
         // Fallback: if no image from assistant and user message indicates image request, generate an image via gpt-image-1
-        if (!imageUrl && isImageRequest(userMessage, previousPrompt)) {
+        if (!imageUrl && isImageRequest(userMessage, promptHistory)) {
             try {
-                const editing = previousPrompt && /(make|change|remove|replace|update|edit)/i.test(userMessage);
-                const dallePrompt = editing && previousPrompt
-                    ? enhancePrompt(`${previousPrompt}. ${userMessage}`)
-                    : enhancePrompt(userMessage);
+                const editing = promptHistory.length > 0 && /(make|change|remove|replace|update|edit)/i.test(userMessage);
+                const combinedHistory = editing ? [...promptHistory, userMessage] : [userMessage];
+                const dallePrompt = enhancePrompt(combinedHistory.join('. '));
 
                 const body = {
                     model: "gpt-image-1",
