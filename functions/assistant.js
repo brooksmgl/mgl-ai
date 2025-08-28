@@ -37,6 +37,7 @@ exports.handler = async (event) => {
             threadId,
             promptHistory = [],
             lastImageUrl,
+            lastImageBase64,
             attachment,
             attachmentName,
             attachmentType
@@ -262,6 +263,8 @@ exports.handler = async (event) => {
                 const images = [];
                 if (attachment) {
                     images.push({ name: attachmentName || 'upload', data: attachment });
+                } else if (lastImageBase64) {
+                    images.push({ name: 'previous.png', data: lastImageBase64 });
                 } else if (lastImageUrl) {
                     try {
                         const prevRes = await fetch(lastImageUrl);
