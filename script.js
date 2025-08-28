@@ -157,20 +157,63 @@ async function sendMessage() {
             messagesDiv.appendChild(botMsg);
         }
 
-        if (data.imageUrl) {
-            console.log("🔍 imageUrl received:", data.imageUrl);
+        let imageUrlToUse = data.imageUrl;
+
+        if (!imageUrlToUse && data.generateImage) {
+            const imgPayload = {
+                message,
+                promptHistory: imagePromptHistory,
+                lastImageUrl,
+                lastImageBase64,
+            };
+
+            if (attachment) {
+                imgPayload.attachment = attachment;
+                imgPayload.attachmentName = attachmentName;
+                imgPayload.attachmentType = attachmentType;
+            }
+
+            const imgResponse = await fetch('/.netlify/functions/generate-image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(imgPayload)
+            });
+
+            const imgText = await imgResponse.text();
+            if (!imgResponse.ok) {
+                console.error('generate-image function error:', imgText);
+                throw new Error(imgText || `HTTP ${imgResponse.status}`);
+            }
+
+            let imgData;
+            try {
+                imgData = JSON.parse(imgText);
+            } catch {
+                console.warn('Non-JSON image response:', imgText);
+                imgData = { error: imgText };
+            }
+
+            if (imgData.error) {
+                throw new Error(imgData.error);
+            }
+
+            imageUrlToUse = imgData.imageUrl;
+        }
+
+        if (imageUrlToUse) {
+            console.log("🔍 imageUrl received:", imageUrlToUse);
             const image = document.createElement('img');
-            image.src = data.imageUrl;
+            image.src = imageUrlToUse;
             image.alt = message;
             image.style.maxWidth = '300px';
             image.className = 'message bot';
             image.onerror = () => {
-                console.error("🚨 Image failed to load:", data.imageUrl);
+                console.error("🚨 Image failed to load:", imageUrlToUse);
             };
             messagesDiv.appendChild(image);
-            lastImageUrl = data.imageUrl;
+            lastImageUrl = imageUrlToUse;
             try {
-                const imgRes = await fetch(data.imageUrl);
+                const imgRes = await fetch(imageUrlToUse);
                 if (!imgRes.ok) {
                     throw new Error(`Image fetch failed: ${imgRes.status}`);
                 }
@@ -180,9 +223,7 @@ async function sendMessage() {
                 console.error("Failed to convert image to base64:", err);
                 lastImageBase64 = "";
             }
-        }
 
-        if (data.imageUrl) {
             const { isDirect, isEdit } = detectImageRequest(message, imagePromptHistory);
             if (isDirect) {
                 imagePromptHistory = [message];
