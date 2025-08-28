@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { isImageRequest } = require('../functions/assistant');
+const { isImageRequest } = require('../image-request');
 
 assert.strictEqual(isImageRequest('draw a cat', []), true, 'direct image prompt');
 assert.strictEqual(isImageRequest('Make it blue', ['draw a cat']), true, 'edit with reference to previous prompt');

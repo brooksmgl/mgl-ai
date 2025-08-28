@@ -1,10 +1,4 @@
-function isImageRequest(prompt, promptHistory = []) {
-    const directImagePrompt = /draw|illustrate|image|picture|generate.*image|create.*image/i.test(prompt);
-    const editRequest = /(make|change|remove|replace|update|edit)(.*image|.*it|)/i.test(prompt);
-    return directImagePrompt || (promptHistory.length > 0 && editRequest);
-}
-
-exports.isImageRequest = isImageRequest;
+const { isImageRequest } = require('../image-request');
 
 function enhancePrompt(prompt) {
     return `In a cute, cartoon, craft-friendly style: ${prompt}`;
