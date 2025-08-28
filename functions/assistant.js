@@ -337,7 +337,7 @@ exports.handler = async (event) => {
                     body: JSON.stringify({ error: 'Failed to fetch image content' })
                 };
             }
-            const buffer = await imageResp.buffer();
+            const buffer = await imageResp.arrayBuffer();
             const base64Image = Buffer.from(buffer).toString('base64');
             assistantResponse.image = `data:image/png;base64,${base64Image}`;
         }
