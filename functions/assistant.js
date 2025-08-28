@@ -168,11 +168,11 @@ exports.handler = async (event) => {
         });
         if (!msgResp.ok) {
             const errText = await msgResp.text();
-            console.error('Failed to post message:', errText);
+            console.error(`Failed to post message (status ${msgResp.status}):`, errText);
             return {
                 statusCode: msgResp.status,
                 headers,
-                body: JSON.stringify({ error: 'Failed to post message to thread' })
+                body: JSON.stringify({ error: errText })
             };
         }
 
