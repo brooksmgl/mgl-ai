@@ -16,10 +16,6 @@ function storeThreadId(id) {
     sessionStorage.setItem('mgl_thread_id', id);
 }
 
-function isImagePrompt(msg) {
-    const imageKeywords = ["draw", "sketch", "illustrate", "render", "create an image", "generate an image", "show me", "picture of", "image of"];
-    return imageKeywords.some(kw => msg.toLowerCase().includes(kw));
-}
 
 function readFileAsBase64(file) {
     return new Promise((resolve, reject) => {
@@ -179,9 +175,10 @@ async function sendMessage() {
         }
 
         if (data.imageUrl) {
-            if (isImagePrompt(message)) {
+            const { isDirect, isEdit } = detectImageRequest(message, imagePromptHistory);
+            if (isDirect) {
                 imagePromptHistory = [message];
-            } else if (imagePromptHistory.length > 0) {
+            } else if (isEdit || imagePromptHistory.length > 0) {
                 imagePromptHistory.push(message);
             }
         }
