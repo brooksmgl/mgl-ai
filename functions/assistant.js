@@ -29,6 +29,7 @@ exports.handler = async (event) => {
         const {
             message: userMessage,
             threadId,
+            runId,
             promptHistory = [],
             lastImageUrl,
             lastImageBase64,
@@ -37,7 +38,7 @@ exports.handler = async (event) => {
             attachmentType
         } = JSON.parse(event.body || '{}');
 
-        if (!userMessage && !attachment) {
+        if (!userMessage && !attachment && !runId) {
             return {
                 statusCode: 400,
                 headers,
@@ -54,31 +55,57 @@ exports.handler = async (event) => {
             };
         }
 
+        const progressingStatuses = new Set(["queued", "in_progress"]);
+        const errorStatuses = new Set(["failed", "cancelled", "cancelling", "expired"]);
+
         let thread_id = threadId;
-        if (!thread_id) {
-            const threadResp = await fetch("https://api.openai.com/v1/threads", {
-                method: "POST",
+        let run_id = runId;
+        let status = "queued";
+        let lastCheck = null;
+
+        if (run_id && thread_id && !userMessage && !attachment) {
+            const checkResp = await fetch(`https://api.openai.com/v1/threads/${thread_id}/runs/${run_id}`, {
                 headers: {
                     "Authorization": `Bearer ${OPENAI_KEY}`,
-                    "Content-Type": "application/json",
-                    "OpenAI-Beta": "assistants=v2"
-                }
+                    "OpenAI-Beta": "assistants=v2",
+                },
             });
-            if (!threadResp.ok) {
-                const errText = await threadResp.text();
-                console.error("Thread creation failed:", errText);
+            if (!checkResp.ok) {
+                const errText = await checkResp.text();
+                console.error('Run status check failed:', errText);
                 return {
-                    statusCode: threadResp.status,
+                    statusCode: checkResp.status,
                     headers,
-                    body: JSON.stringify({ error: "Failed to create thread" })
+                    body: JSON.stringify({ error: 'Failed to check run status' })
                 };
             }
-            const threadRes = await threadResp.json();
-            console.log("THREAD RESPONSE:", threadRes);
-            thread_id = threadRes.id;
+            lastCheck = await checkResp.json();
+            status = lastCheck.status;
         } else {
-            console.log("Reusing thread:", thread_id);
-        }
+            if (!thread_id) {
+                const threadResp = await fetch("https://api.openai.com/v1/threads", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${OPENAI_KEY}`,
+                        "Content-Type": "application/json",
+                        "OpenAI-Beta": "assistants=v2"
+                    }
+                });
+                if (!threadResp.ok) {
+                    const errText = await threadResp.text();
+                    console.error("Thread creation failed:", errText);
+                    return {
+                        statusCode: threadResp.status,
+                        headers,
+                        body: JSON.stringify({ error: "Failed to create thread" })
+                    };
+                }
+                const threadRes = await threadResp.json();
+                console.log("THREAD RESPONSE:", threadRes);
+                thread_id = threadRes.id;
+            } else {
+                console.log("Reusing thread:", thread_id);
+            }
 
         let fileId = null;
         if (attachment) {
@@ -171,15 +198,12 @@ exports.handler = async (event) => {
 
         console.log("RUN RESPONSE:", runRes);
 
-        const run_id = runRes.id;
+        run_id = runRes.id;
 
-        let status = runRes.status || "queued";
+        status = runRes.status || "queued";
         let attempts = 0;
-        const maxAttempts = 30;
-        let lastCheck = runRes;
-
-        const progressingStatuses = new Set(["queued", "in_progress"]);
-        const errorStatuses = new Set(["failed", "cancelled", "cancelling", "expired"]);
+        const maxAttempts = 10; // consider Netlify background functions or webhooks for longer runs
+        lastCheck = runRes;
 
         while (progressingStatuses.has(status) && attempts < maxAttempts) {
             await new Promise(resolve => setTimeout(resolve, 1000));
@@ -202,8 +226,17 @@ exports.handler = async (event) => {
             status = lastCheck.status;
             attempts++;
         }
+        }
 
-        if (status === "requires_action") {
+    if (progressingStatuses.has(status)) {
+        return {
+            statusCode: 202,
+            headers,
+            body: JSON.stringify({ pending: true, runId: run_id, threadId: thread_id })
+        };
+    }
+
+    if (status === "requires_action") {
             return {
                 statusCode: 400,
                 headers,
@@ -392,7 +425,8 @@ exports.handler = async (event) => {
             body: JSON.stringify({
                 text: assistantResponse.text || "Here's your image!",
                 imageUrl,
-                threadId: thread_id
+                threadId: thread_id,
+                runId: run_id
             })
         };
     } catch (error) {
