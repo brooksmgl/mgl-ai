@@ -155,11 +155,15 @@ exports.handler = async (event) => {
 
         const run_id = runRes.id;
 
-        let status = "in_progress";
+        let status = runRes.status || "queued";
         let attempts = 0;
         const maxAttempts = 30;
+        let lastCheck = runRes;
 
-        while ((status === "in_progress" || status === "queued") && attempts < maxAttempts) {
+        const progressingStatuses = new Set(["queued", "in_progress"]);
+        const errorStatuses = new Set(["failed", "cancelled", "cancelling", "expired"]);
+
+        while (progressingStatuses.has(status) && attempts < maxAttempts) {
             await new Promise(resolve => setTimeout(resolve, 1000));
             const checkRes = await fetch(`https://api.openai.com/v1/threads/${thread_id}/runs/${run_id}`, {
                 headers: {
@@ -167,16 +171,33 @@ exports.handler = async (event) => {
                     "OpenAI-Beta": "assistants=v2"
                 }
             });
-            const check = await checkRes.json();
-            status = check.status;
+            lastCheck = await checkRes.json();
+            status = lastCheck.status;
             attempts++;
+        }
+
+        if (status === "requires_action") {
+            return {
+                statusCode: 400,
+                headers,
+                body: JSON.stringify({ error: "Run requires action and cannot be completed automatically." })
+            };
+        }
+
+        if (errorStatuses.has(status)) {
+            const message = lastCheck?.last_error?.message || `Assistant run ended with status ${status}`;
+            return {
+                statusCode: 500,
+                headers,
+                body: JSON.stringify({ error: message })
+            };
         }
 
         if (status !== "completed") {
             return {
                 statusCode: 500,
                 headers,
-                body: JSON.stringify({ error: "Assistant run did not complete in time." })
+                body: JSON.stringify({ error: `Assistant run ended with status ${status}` })
             };
         }
 
